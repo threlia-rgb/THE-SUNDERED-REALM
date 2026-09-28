@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Threlia · 游戏厅 Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Great+Vibes&display=swap" rel="stylesheet">
+<style>
+  :root{--gold:#e8c15a;--gold2:#b8862f;--goldl:#f7e6ad;--claret:#b21f3a;--atb:#57e0c8;--ink:#f3ead4;--dim:#c9b78f;--line:#4a3a6e;}
+  *{margin:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{min-height:100%;background:#0d0718;color:var(--ink);font-family:'Cormorant Garamond',Georgia,serif;}
+  body{background:radial-gradient(130% 90% at 50% -10%,#3a1c5c 0%,#180a2a 55%,#0d0718 100%);}
+  .wrap{max-width:900px;margin:0 auto;padding:36px 18px 60px;}
+  header{text-align:center;margin-bottom:8px;}
+  header .crest{font-size:46px;filter:drop-shadow(0 0 22px rgba(87,224,200,.4));}
+  header h1{font-family:'Cinzel',serif;font-weight:700;font-size:34px;color:var(--gold);letter-spacing:.08em;text-shadow:0 0 26px rgba(201,162,75,.35);margin-top:4px;}
+  header .sub{color:var(--atb);font-style:italic;letter-spacing:.18em;font-size:13px;margin-top:6px;}
+  header .word{font-family:'Great Vibes',cursive;color:var(--claret);font-size:30px;margin-top:2px;}
+  .rule{width:120px;height:1px;margin:22px auto 26px;background:linear-gradient(90deg,transparent,var(--gold2),transparent);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;}
+  a.card{display:flex;flex-direction:column;gap:8px;text-decoration:none;color:inherit;
+    background:linear-gradient(180deg,#20143a,#150c28);border:1px solid var(--line);
+    border-left:4px solid var(--gold2);padding:16px 16px 18px;transition:transform .08s,border-color .18s,box-shadow .18s;position:relative;overflow:hidden;}
+  a.card:hover{transform:translateY(-3px);border-color:var(--gold);box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 1px rgba(232,193,90,.15);}
+  a.card:active{transform:translateY(0);}
+  .card .top{display:flex;align-items:center;gap:12px;}
+  .card .ic{font-size:34px;flex:none;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));}
+  .card .name{font-family:'Cinzel',serif;font-size:17px;color:var(--goldl);letter-spacing:.02em;}
+  .card .tag{font-size:11px;color:var(--atb);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;}
+  .card .desc{font-size:13px;color:var(--dim);line-height:1.5;}
+  .card .how{font-size:11.5px;color:#9a8f7c;font-style:italic;border-top:1px solid #2a2140;padding-top:8px;margin-top:2px;}
+  .card .play{margin-top:auto;align-self:flex-start;font-family:'Cinzel';font-size:12px;color:#160a26;background:linear-gradient(180deg,#f6e2a0,#d8a93f);padding:7px 16px;border-radius:2px;}
+  .card.flag{border-left-color:var(--atb);}
+  .card.flag .badge{position:absolute;top:10px;right:-30px;transform:rotate(45deg);background:var(--claret);color:#fff;font-family:'Cinzel';font-size:10px;letter-spacing:.1em;padding:3px 34px;}
+  footer{text-align:center;color:#6f6357;font-size:12px;margin-top:34px;line-height:1.9;letter-spacing:.04em;}
+  footer b{color:#8d7f70;font-weight:normal;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="crest">🜂</div>
+    <h1>THRELIA · ARCADE</h1>
+    <div class="sub">THE&nbsp;SUNDERED&nbsp;REALM</div>
+    <div class="word">Threlia</div>
+  </header>
+  <div class="rule"></div>
+
+  <div class="grid">
+
+    <a class="card flag" href="./threlia-action.html">
+      <div class="badge">MAIN</div>
+      <div class="top"><div class="ic">🐉</div><div><div class="name">Threlia</div><div class="tag">养成 · 冒险 · 实时对决</div></div></div>
+      <div class="desc">养育灵兽 Threlia,踏上章节冒险,以带动画的实时打斗击败机械飞龙与钴蓝海妖。</div>
+      <div class="how">养成升级 → Adventure 选旅程 → 选祝福 → 实时 Boss 战。</div>
+      <span class="play">进入 ▶</span>
+    </a>
+
+    <a class="card" href="./threlia-survivors.html">
+      <div class="top"><div class="ic">✦</div><div><div class="name">Aether Survivors</div><div class="tag">幸存者 · 突围</div></div></div>
+      <div class="desc">在机械浪潮中生存,自动施放灵能弹,捡齿轮升级三选一,硬抗头目。</div>
+      <div class="how">左摇杆移动 · 右摇杆瞄准 · 💥 炸弹(电脑 WASD+鼠标)。</div>
+      <span class="play">开始 ▶</span>
+    </a>
+
+    <a class="card" href="./threlia-gear-run.html">
+      <div class="top"><div class="ic">🏃</div><div><div class="name">Gear Run</div><div class="tag">横版闯关</div></div></div>
+      <div class="desc">马里奥式横版:奔跑跳跃、踩爆机械小怪、顶问号砖吃金币,冲到城堡。</div>
+      <div class="how">◀▶ 移动 · JUMP 跳(按住更高)。</div>
+      <span class="play">开跑 ▶</span>
+    </a>
+
+    <a class="card" href="./threlia-battle-core.html">
+      <div class="top"><div class="ic">⚔️</div><div><div class="name">Battle Core</div><div class="tag">ATB · Materia</div></div></div>
+      <div class="desc">FF7 式战斗核心:实时 ATB 时间轴 + 魔晄石(符文)组装 + 数据驱动敌人 AI。</div>
+      <div class="how">槽满出招 · Materia Loadout 自由组装链接槽。</div>
+      <span class="play">布阵 ▶</span>
+    </a>
+
+    <a class="card" href="./aetherborne.html">
+      <div class="top"><div class="ic">🗺️</div><div><div class="name">Aetherborne</div><div class="tag">像素开放世界 JRPG</div></div></div>
+      <div class="desc">开放世界:ARM 工具解谜、船与飞龙坐骑、秘宝金库、符文技能、分段血条 Boss。</div>
+      <div class="how">方向/摇杆移动 · USE 交互 · MENU 菜单。</div>
+      <span class="play">冒险 ▶</span>
+    </a>
+
+    <a class="card" href="./aether-drift.html">
+      <div class="top"><div class="ic">💫</div><div><div class="name">Aether Drift</div><div class="tag">街机 · 接光</div></div></div>
+      <div class="desc">轻松小品:拖动灵球接住灵能、连击加成、躲避碎片、抓流星减速。</div>
+      <div class="how">拖动移动(电脑鼠标/方向键)。</div>
+      <span class="play">玩一局 ▶</span>
+    </a>
+
+  </div>
+
+  <footer>
+    <b>Threlia</b> — a Sundered Realm.<br>
+    单文件网页游戏 · 手机 &amp; 电脑可玩 · Made with care.
+  </footer>
+</div>
+</body>
+</html>

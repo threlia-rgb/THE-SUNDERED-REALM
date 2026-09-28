@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Threlia — ATB Battle Core</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#e8c15a;--gold2:#b8862f;--goldl:#f7e6ad;--claret:#b21f3a;
+    --ink:#f3ead4;--dim:#c9b78f;--panel:#20143a;--panel2:#150c28;--line:#4a3a6e;
+    --atb:#57e0c8;--hp:#7fce6e;--hp2:#4f9a45;--mp:#6aa8e8;--mag:#3fb54a;--sup:#4a90d8;--sum:#d84a4a;--ind:#a066cc;--cmd:#e8c15a;
+  }
+  *{margin:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;}
+  html,body{height:100%;overflow:hidden;background:#0d0718;color:var(--ink);font-family:'Cormorant Garamond',Georgia,serif;}
+  #app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 50% -10%,#3a1c5c,#180a2a 60%,#0d0718);}
+  #stage{position:relative;width:100%;height:100%;max-width:500px;max-height:920px;overflow:hidden;
+    background:linear-gradient(180deg,#241645,#140b26);border:2px solid var(--gold2);box-shadow:0 0 0 4px #241038, inset 0 0 60px rgba(0,0,0,.5);}
+  .ttl{font-family:'Cinzel',serif;color:var(--goldl);letter-spacing:.06em;}
+  .btn{font-family:'Cinzel',serif;letter-spacing:.03em;background:linear-gradient(180deg,#3a2860,#241540);color:var(--ink);border:1.5px solid var(--line);padding:11px 12px;cursor:pointer;font-size:14px;transition:transform .05s,border-color .15s;}
+  .btn:active{transform:translateY(1px);}.btn.gold{border-color:var(--gold);color:var(--goldl);background:linear-gradient(180deg,#5a3aa0,#33205e);}
+  .btn:disabled{opacity:.35;}
+  .scr{position:absolute;inset:0;display:none;flex-direction:column;}.scr.show{display:flex;}
+
+  /* title */
+  #title{align-items:center;justify-content:center;text-align:center;gap:0;}
+  #title h1{font-family:'Cinzel';font-size:30px;color:var(--gold);text-shadow:0 0 26px rgba(201,162,75,.4);letter-spacing:.06em;}
+  #title .s{color:var(--atb);font-style:italic;letter-spacing:.16em;font-size:12px;margin:6px 0 26px;}
+  #title .menu{display:flex;flex-direction:column;gap:11px;width:240px;}
+
+  /* architecture info */
+  #arch{padding:16px;overflow:auto;}
+  #arch h2{font-family:'Cinzel';color:var(--gold);font-size:16px;text-align:center;margin-bottom:10px;}
+  .arow{border:1px solid var(--line);background:var(--panel2);padding:9px 11px;margin-bottom:8px;}
+  .arow b{color:var(--goldl);font-family:'Cinzel';font-size:12.5px;}
+  .arow span{display:block;color:var(--dim);font-size:12.5px;margin-top:3px;line-height:1.4;}
+
+  /* loadout */
+  #load{padding:12px;overflow:auto;}
+  #load h2{font-family:'Cinzel';color:var(--gold);font-size:15px;text-align:center;margin-bottom:8px;}
+  .hero-card{border:1px solid var(--line);background:var(--panel2);padding:10px;margin-bottom:10px;}
+  .hero-card .hn{font-family:'Cinzel';color:var(--goldl);font-size:14px;display:flex;justify-content:space-between;}
+  .hero-card .st{font-size:11.5px;color:var(--dim);margin:4px 0 8px;}
+  .slots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
+  .slot{width:38px;height:38px;border-radius:50%;border:2px solid var(--line);background:#0e0820;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;position:relative;}
+  .slot.mag{border-color:var(--mag);}.slot.sup{border-color:var(--sup);}.slot.sum{border-color:var(--sum);}.slot.ind{border-color:var(--ind);}
+  .link{width:10px;height:3px;background:var(--gold);}
+  .deco{font-size:11px;color:var(--atb);margin-top:6px;font-style:italic;line-height:1.35;}
+
+  /* battle */
+  #battle{}
+  #enemies{padding:14px 12px 6px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;min-height:150px;align-items:flex-start;position:relative;}
+  .enemy{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;width:118px;transition:opacity .4s,transform .4s;}
+  .enemy .spr{font-size:46px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.6));transition:transform .12s;}
+  .enemy.hit .spr{animation:shk .3s;}
+  @keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .enemy.dead{opacity:0;transform:scale(.4) translateY(10px);pointer-events:none;}
+  .enemy.tgt .en{color:var(--claret);}
+  .enemy.acting .spr{transform:scale(1.12) translateY(-4px);filter:drop-shadow(0 0 14px var(--claret));}
+  .enemy .en{font-size:12px;color:var(--ink);}
+  .ehp{width:104px;height:8px;background:#0c0a18;border:1px solid var(--line);position:relative;}
+  .ehp>i{position:absolute;inset:0;background:linear-gradient(90deg,#7a1f31,#c23a55);}
+  .weaktag{font-size:9px;color:var(--atb);letter-spacing:.04em;}
+  #bfloat{position:absolute;inset:0;pointer-events:none;}
+  .dmg{position:absolute;font-family:'Cinzel';font-weight:700;font-size:22px;text-shadow:0 2px 5px #000;animation:df 1s ease-out forwards;}
+  @keyframes df{0%{opacity:0;transform:translateY(8px) scale(.7)}20%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:translateY(-40px)}}
+
+  #blog{margin:2px 12px;padding:6px 10px;background:rgba(10,6,22,.6);border:1px solid var(--line);font-size:12.5px;color:var(--dim);font-style:italic;min-height:30px;}
+  #party{padding:6px 12px 4px;display:flex;flex-direction:column;gap:6px;}
+  .prow{display:grid;grid-template-columns:78px 1fr;gap:8px;align-items:center;border:1px solid var(--line);background:var(--panel2);padding:5px 8px;transition:border-color .2s,background .2s;}
+  .prow.ready{border-color:var(--atb);box-shadow:0 0 10px rgba(87,224,200,.25);}
+  .prow.active{border-color:var(--gold);background:#2a1a48;}
+  .prow.pdead{opacity:.4;}
+  .pn{font-family:'Cinzel';font-size:12.5px;color:var(--goldl);}
+  .pn small{display:block;color:var(--dim);font-size:9.5px;font-family:'Cormorant Garamond';font-style:italic;}
+  .pbars{display:flex;flex-direction:column;gap:2px;}
+  .lbar{height:8px;border:1px solid var(--line);background:#0c0a18;position:relative;}
+  .lbar>i{position:absolute;inset:0;transition:width .12s linear;}
+  .lbar.hp>i{background:linear-gradient(90deg,var(--hp2),var(--hp));}
+  .lbar.mp>i{background:linear-gradient(90deg,#2f6f9e,var(--mp));}
+  .lbar.atb{height:6px;}.lbar.atb>i{background:linear-gradient(90deg,#2f9f92,var(--atb));}
+  .lbar.atb.full>i{background:linear-gradient(90deg,var(--atb),#b6fff0);}
+  .pnum{font-size:9.5px;color:var(--dim);display:flex;justify-content:space-between;}
+
+  #cmd{padding:6px 12px 12px;min-height:120px;}
+  #cmdgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+  #cmdgrid .btn{text-align:left;}
+  #submenu{display:none;grid-template-columns:1fr 1fr;gap:6px;max-height:170px;overflow:auto;}
+  #submenu .btn{font-size:12.5px;display:flex;justify-content:space-between;gap:6px;}
+  #submenu .cost{color:var(--mp);font-size:11px;}
+  .back{grid-column:1/-1;}
+  #hint{text-align:center;font-size:12px;color:var(--atb);font-style:italic;padding:8px;}
+  .modeToggle{position:absolute;top:8px;right:10px;font-size:11px;color:var(--dim);border:1px solid var(--line);padding:3px 8px;cursor:pointer;z-index:5;font-family:'Cinzel';}
+
+  /* result */
+  #result{align-items:center;justify-content:center;text-align:center;background:rgba(8,5,16,.9);}
+  #result h2{font-family:'Cinzel';color:var(--gold);font-size:26px;margin-bottom:10px;}
+  #result .sum{font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:20px;max-width:320px;}
+
+  /* materia picker modal */
+  #picker{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(8,5,16,.85);padding:20px;}
+  #pickinner{width:100%;max-width:360px;background:var(--panel);border:2px solid var(--gold2);padding:14px;max-height:80%;overflow:auto;}
+  #pickinner h3{font-family:'Cinzel';color:var(--goldl);font-size:14px;margin-bottom:8px;text-align:center;}
+  .mopt{display:flex;align-items:center;gap:9px;border:1px solid var(--line);padding:8px;margin-bottom:6px;cursor:pointer;background:var(--panel2);}
+  .mopt .mo{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid var(--line);}
+  .mopt .mt{font-size:12.5px;color:var(--ink);}.mopt .mt small{display:block;color:var(--dim);font-size:11px;font-style:italic;}
+</style>
+</head>
+<body>
+<div id="app"><div id="stage">
+
+  <!-- TITLE -->
+  <div class="scr show" id="title">
+    <h1>THRELIA</h1><div class="s">ATB · BATTLE&nbsp;CORE</div>
+    <div class="menu">
+      <button class="btn gold" id="mBattle">Begin Battle</button>
+      <button class="btn" id="mLoad">Materia Loadout</button>
+      <button class="btn" id="mArch">ⓘ Architecture</button>
+    </div>
+  </div>
+
+  <!-- ARCHITECTURE -->
+  <div class="scr" id="arch">
+    <h2>System Architecture</h2>
+    <div id="archbody"></div>
+    <button class="btn" id="archBack" style="margin-top:6px">◀ Back</button>
+  </div>
+
+  <!-- LOADOUT -->
+  <div class="scr" id="load">
+    <h2>Materia Loadout — tap a slot to equip</h2>
+    <div id="loadbody"></div>
+    <button class="btn gold" id="loadBattle" style="margin:4px 0 8px">To Battle ▶</button>
+    <button class="btn" id="loadBack">◀ Title</button>
+  </div>
+
+  <!-- BATTLE -->
+  <div class="scr" id="battle">
+    <div class="modeToggle" id="modeBtn">Mode: WAIT</div>
+    <div id="enemies"><div id="bfloat"></div></div>
+    <div id="blog">Foes approach…</div>
+    <div id="party"></div>
+    <div id="cmd">
+      <div id="hint">Charging ATB…</div>
+      <div id="cmdgrid" style="display:none"></div>
+      <div id="submenu"></div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="scr" id="result">
+    <h2 id="rTitle"></h2>
+    <div class="sum" id="rSum"></div>
+    <button class="btn gold" id="rBack" style="width:200px">Return to Title</button>
+  </div>
+
+  <!-- MATERIA PICKER -->
+  <div id="picker"><div id="pickinner"><h3>Equip Materia</h3><div id="pickopts"></div></div></div>
+
+</div></div>
+
+<script>
+"use strict";
+/* ==========================================================================
+   THRELIA — ATB BATTLE CORE
+   A faithful vertical slice of the FF7-style architecture:
+   State machine ATB · Command-queued serial pipeline · Materia (Decorator/
+   Strategy) with linked Support · data-driven Enemy AI (Interpreter/Bytecode)
+   · Flyweight materia base data + per-battle instances · stat recompute pipeline
+   ========================================================================== */
+const $=id=>document.getElementById(id);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* ---------- FLYWEIGHT: immutable base data (read once) ---------- */
+const ELEM={NONE:'none',FIRE:'fire',ICE:'ice',BOLT:'lightning'};
+const MATERIA_DB={
+  // Magic (green): grants spells; higher AP level unlocks stronger tier
+  fire:  {id:'fire', type:'magic', color:'var(--mag)', ic:'🔥', name:'Fire',
+    tiers:[{name:'Fire',pow:24,mp:8},{name:'Fira',pow:46,mp:16},{name:'Firaga',pow:82,mp:30}], el:ELEM.FIRE, apLv:[0,200,600]},
+  ice:   {id:'ice', type:'magic', color:'var(--mag)', ic:'❄️', name:'Ice',
+    tiers:[{name:'Blizzard',pow:24,mp:8},{name:'Blizzara',pow:46,mp:16}], el:ELEM.ICE, apLv:[0,200]},
+  bolt:  {id:'bolt', type:'magic', color:'var(--mag)', ic:'⚡', name:'Lightning',
+    tiers:[{name:'Thunder',pow:24,mp:8},{name:'Thundara',pow:46,mp:16}], el:ELEM.BOLT, apLv:[0,200]},
+  cure:  {id:'cure', type:'magic', color:'var(--mag)', ic:'💚', name:'Cure',
+    tiers:[{name:'Cure',pow:40,mp:12},{name:'Cura',pow:80,mp:24}], el:ELEM.NONE, heal:true, apLv:[0,220]},
+  // Summon (red)
+  ifrit: {id:'ifrit', type:'summon', color:'var(--sum)', ic:'🜂', name:'Ifrit',
+    tiers:[{name:'Ifrit',pow:64,mp:38}], el:ELEM.FIRE, summon:true, apLv:[0]},
+  // Support (blue) — DECORATORS applied to a linked Magic/Summon
+  all:   {id:'all', type:'support', color:'var(--sup)', ic:'◎', name:'All', deco:'all',
+    d:'Linked spell targets ALL foes (−38% power).'},
+  turbo: {id:'turbo', type:'support', color:'var(--sup)', ic:'⇧', name:'MP Turbo', deco:'turbo',
+    d:'Linked spell: ×1.5 power, ×2 MP cost.'},
+  elem:  {id:'elem', type:'support', color:'var(--sup)', ic:'✳', name:'Elemental', deco:'elem',
+    d:'Weapon attacks gain the linked spell\'s element.'},
+  // Independent (purple) — pure stat modifiers via recompute pipeline
+  hpplus:{id:'hpplus', type:'independent', color:'var(--ind)', ic:'♥', name:'HP Plus',
+    d:'Max HP ×1.25.', mult:{maxhp:1.25}},
+  magplus:{id:'magplus', type:'independent', color:'var(--ind)', ic:'✦', name:'Magic Plus',
+    d:'Magic +8.', add:{mag:8}}
+};
+
+/* ---------- GLOBAL STATE (party / inventory / materia inventory) ---------- */
+const HERO_BASE={
+  rtelian:{name:'Rtelian', role:'Champion', spr:'🗡️', base:{str:42,mag:24,vit:34,spr:26,dex:58,maxhp:880,maxmp:70}, wpn:28},
+  sol:{name:'Sol', role:'Oracle', spr:'🔮', base:{str:22,mag:46,vit:22,spr:36,dex:50,maxhp:620,maxmp:130}, wpn:14},
+  bram:{name:'Bram', role:'Warden', spr:'🛡️', base:{str:40,mag:18,vit:46,spr:30,dex:40,maxhp:1050,maxmp:60}, wpn:26}
+};
+// weapon slots: 4 each; linked pairs [0-1],[2-3]. slot holds a materia id or null.
+const G={
+  party:{
+    rtelian:{slots:['all','fire',null,'cure']},
+    sol:{slots:['turbo','bolt','ice',null]},
+    bram:{slots:['elem','fire','hpplus',null]}
+  },
+  inventory:{potion:5, ether:3, phoenix:1},
+  materiaLevels:{}, // id -> AP (persist growth across battles this session)
+  flags:{}
+};
+const LINKS=[[0,1],[2,3]]; // linked slot pairs
+
+/* materia instance level from AP */
+function materiaTier(id){
+  const m=MATERIA_DB[id]; if(!m||!m.tiers) return 0;
+  const ap=G.materiaLevels[id]||0; let lv=0;
+  (m.apLv||[0]).forEach((t,i)=>{ if(ap>=t) lv=i; });
+  return Math.min(lv, m.tiers.length-1);
+}
+
+/* ---------- STAT RECOMPUTE PIPELINE ----------
+   Final = (Base) × ∏ materiaMult + Σ materiaAdd + equip           */
+function computeStats(heroId){
+  const b=HERO_BASE[heroId].base, slots=G.party[heroId].slots;
+  const out=Object.assign({},b);
+  slots.forEach(id=>{ if(!id)return; const m=MATERIA_DB[id];
+    if(m.mult) for(const k in m.mult) out[k]=Math.round((out[k]||0)*m.mult[k]);
+    if(m.add) for(const k in m.add) out[k]=(out[k]||0)+m.add[k];
+  });
+  return out;
+}
+/* castable actions from equipped Magic/Summon, decorated by linked Support */
+function heroSpells(heroId){
+  const slots=G.party[heroId].slots, list=[];
+  slots.forEach((id,idx)=>{
+    if(!id) return; const m=MATERIA_DB[id];
+    if(m.type!=='magic'&&m.type!=='summon') return;
+    // find linked partner support
+    let support=null;
+    LINKS.forEach(([a,bk])=>{ let partner = idx===a?bk : idx===bk?a : -1;
+      if(partner>=0){ const pid=slots[partner]; if(pid&&MATERIA_DB[pid].type==='support'&&MATERIA_DB[pid].deco!=='elem') support=MATERIA_DB[pid]; } });
+    const tier=m.tiers[materiaTier(id)];
+    let act={ srcId:id, name:tier.name, el:m.el, pow:tier.pow, mp:tier.mp, heal:!!m.heal, summon:!!m.summon, target:m.heal?'ally':'enemyOne', deco:[] };
+    if(support){ if(support.deco==='all'&&!act.heal){ act.target='enemyAll'; act.pow=Math.round(act.pow*0.62); act.deco.push('All'); }
+      if(support.deco==='turbo'){ act.pow=Math.round(act.pow*1.5); act.mp=Math.round(act.mp*2); act.deco.push('Turbo'); } }
+    list.push(act);
+  });
+  return list;
+}
+/* weapon element from Elemental support linked to a magic */
+function weaponElement(heroId){
+  const slots=G.party[heroId].slots; let el=ELEM.NONE;
+  LINKS.forEach(([a,b])=>{ const ma=slots[a]?MATERIA_DB[slots[a]]:null, mb=slots[b]?MATERIA_DB[slots[b]]:null;
+    if(ma&&mb){ if(ma.deco==='elem'&&mb.el) el=mb.el; if(mb.deco==='elem'&&ma.el) el=ma.el; } });
+  return el;
+}
+
+/* ---------- ENEMY DATA + AI BYTECODE ----------
+   ai = list of opcodes evaluated top-down against battle "memory":
+   ["IF_HP_BELOW", pct, skill, targetSel]
+   ["EVERY", n, skill, targetSel]
+   ["ELSE", skill, targetSel]                                       */
+const ENEMY_DB={
+  gearling:{name:'Gearling', spr:'⚙️', base:{str:26,mag:12,vit:16,spr:14,dex:44,maxhp:340,maxmp:40}, weak:ELEM.BOLT, resist:ELEM.NONE, xpAP:60,
+    skills:{attack:{name:'Ram',phys:true,pow:0}, overclock:{name:'Overclock',buff:'haste',self:true}},
+    ai:[["IF_HP_BELOW",35,"overclock","self"],["ELSE","attack","weakHero"]]},
+  sentinel:{name:'Gear Sentinel', spr:'🛠️', base:{str:30,mag:14,vit:24,spr:18,dex:38,maxhp:460,maxmp:40}, weak:ELEM.BOLT, resist:ELEM.NONE, xpAP:80,
+    skills:{attack:{name:'Crush',phys:true,pow:6}, spark:{name:'Spark',el:ELEM.BOLT,pow:22}},
+    ai:[["EVERY",3,"spark","randHero"],["ELSE","attack","weakHero"]]},
+  mechdraco:{name:'Mech-Draco', spr:'🐉', base:{str:46,mag:32,vit:34,spr:30,dex:42,maxhp:2300,maxmp:200}, weak:ELEM.ICE, resist:ELEM.FIRE, boss:true, xpAP:300,
+    skills:{attack:{name:'Claw',phys:true,pow:8}, flame:{name:'Flame Breath',el:ELEM.FIRE,pow:38}, gearblast:{name:'Gear Blast',el:ELEM.NONE,pow:30,all:true}},
+    ai:[["IF_HP_BELOW",45,"gearblast","allHeroes"],["EVERY",3,"flame","randHero"],["ELSE","attack","weakHero"]]}
+};
+
+/* ---------- BATTLE RUNTIME ---------- */
+let B=null, RAF=null, lastT=0;
+const ATB_MAX=100;
+function mkHero(id){ const st=computeStats(id), h=HERO_BASE[id];
+  return {id,side:'hero',name:h.name,role:h.role,spr:h.spr, st, hp:st.maxhp,mp:st.maxmp, atb:0, state:'idle', defend:false, haste:1,
+    wpn:h.wpn, wel:weaponElement(id), spells:heroSpells(id), summonUsed:false}; }
+function mkEnemy(key,tag){ const d=ENEMY_DB[key];
+  return {id:key+(tag||''),key,side:'enemy',name:d.name,spr:d.spr,st:Object.assign({},d.base),
+    hp:d.base.maxhp,mp:d.base.maxmp, atb:0, state:'idle', defend:false, haste:1,
+    weak:d.weak,resist:d.resist,boss:!!d.boss, skills:d.skills, ai:d.ai, aiTurn:0}; }
+
+function startBattle(){
+  B={ heroes:[mkHero('rtelian'),mkHero('sol'),mkHero('bram')],
+      enemies:[mkEnemy('gearling','A'),mkEnemy('gearling','B')],
+      waves:[['sentinel'],['mechdraco']], wave:0,
+      queue:[], executing:false, mode:'wait', active:null, targeting:null, over:false };
+  show('battle'); $('modeBtn').textContent='Mode: WAIT';
+  renderEnemies(); renderParty(); closeCmd(); log('Foes approach — the gauge begins to fill.');
+  lastT=performance.now(); if(RAF) cancelAnimationFrame(RAF); RAF=requestAnimationFrame(loop);
+}
+function endBattleCleanup(){ if(RAF) cancelAnimationFrame(RAF); RAF=null; }
+
+/* ---- main ATB loop (concurrent charging) ---- */
+function loop(t){
+  const dt=Math.min(0.05,(t-lastT)/1000); lastT=t;
+  if(B&&!B.over){
+    const paused = (B.mode==='wait' && (B.active || B.targeting || B.executing)) || B.executing;
+    if(!paused){
+      [...B.heroes,...B.enemies].forEach(c=>{
+        if(c.hp<=0||c.state==='exec') return;
+        if(c.atb<ATB_MAX){ c.atb += dt*(8+c.st.dex*0.28)*c.haste; if(c.atb>=ATB_MAX){ c.atb=ATB_MAX; onReady(c); } }
+      });
+    }
+    updateGauges();
+  }
+  RAF=requestAnimationFrame(loop);
+}
+function onReady(c){ if(c.state!=='idle') return; c.state='ready';
+  if(c.side==='enemy'){ enemyDecide(c); }
+  else { if(!B.active && !B.targeting && !B.executing) selectHero(c); renderParty(); }
+}
+
+/* ---- ENEMY AI INTERPRETER (bytecode VM) ---- */
+function enemyDecide(e){
+  e.aiTurn++;
+  const heroesAlive=B.heroes.filter(h=>h.hp>0); if(!heroesAlive.length) return;
+  const mem={ selfHpPct:e.hp/e.st.maxhp*100, turn:e.aiTurn };
+  let chosen=null;
+  for(const op of e.ai){
+    if(op[0]==='IF_HP_BELOW'){ if(mem.selfHpPct<op[1]){ chosen={skill:op[2],sel:op[3]}; break; } }
+    else if(op[0]==='EVERY'){ if(mem.turn%op[1]===0){ chosen={skill:op[2],sel:op[3]}; break; } }
+    else if(op[0]==='ELSE'){ chosen={skill:op[1],sel:op[2]}; break; }
+  }
+  if(!chosen) chosen={skill:'attack',sel:'weakHero'};
+  // resolve targets
+  let targets=[];
+  if(chosen.sel==='self') targets=[e];
+  else if(chosen.sel==='allHeroes') targets=heroesAlive;
+  else if(chosen.sel==='randHero') targets=[heroesAlive[Math.floor(Math.random()*heroesAlive.length)]];
+  else { targets=[heroesAlive.slice().sort((a,b)=>a.hp-b.hp)[0]]; } // weakHero
+  enqueue({actor:e, kind:'enemySkill', skillKey:chosen.skill, targets});
+}
+
+/* ---- COMMAND QUEUE + SERIAL EXECUTION PIPELINE ---- */
+function enqueue(cmd){ B.queue.push(cmd); if(!B.executing) runQueue(); }
+function runQueue(){
+  if(B.over) return;
+  if(!B.queue.length){ B.executing=false; return; }
+  B.executing=true; const cmd=B.queue.shift();
+  const a=cmd.actor;
+  if(a.hp<=0){ finishStep(a,true); return; }
+  // 1. lock + telegraph
+  markActing(a,true);
+  const tgts=cmd.targets.filter(t=>t.hp>0 || cmd.kind==='item'||cmd.kind==='heal'||cmd.self);
+  const finalT = tgts.length?tgts:(cmd.targets.length?[cmd.targets[0]]:[]);
+  setTimeout(()=>{
+    // 2/3/4. resolve + apply
+    resolve(cmd, finalT);
+    renderEnemies(); renderParty();
+    // 5. release
+    setTimeout(()=>{ markActing(a,false); finishStep(a,false); }, 260);
+  }, a.side==='enemy'?420:200);
+}
+function finishStep(a,skipped){
+  if(a.hp>0){ a.atb=0; a.state='idle'; a.defend=a._willDefend||false; a._willDefend=false; }
+  else { a.state='dead'; }
+  checkOutcome();
+  if(B.over) return;
+  // hand control back / continue
+  if(B.queue.length) runQueue();
+  else { B.executing=false;
+    // if a hero is waiting ready, prompt
+    const r=B.heroes.find(h=>h.hp>0&&h.state==='ready');
+    if(r && !B.active && !B.targeting) selectHero(r);
+    renderParty();
+  }
+}
+
+/* ---- DAMAGE MODELER ---- */
+function elemMult(el,defender){ if(el===ELEM.NONE||!el) return 1; if(defender.weak===el) return 2; if(defender.resist===el) return 0.5; return 1; }
+function physDmg(a,d){ let base=a.st.str*0.55 + (a.wpn||0) + (a.side==='enemy'?(a.curPow||0):0);
+  let dmg=base*rnd(0.9,1.1) - d.st.vit*0.38; dmg=Math.max(1,dmg);
+  const el=a.wel||ELEM.NONE; dmg*=elemMult(el,d);
+  let crit=Math.random()<0.1; if(crit) dmg*=1.6; if(d.defend) dmg*=0.5;
+  return {dmg:Math.round(dmg),crit,el}; }
+function magDmg(a,d,pow,el){ let base=a.st.mag*0.9 + pow*2.0;
+  let dmg=base*rnd(0.9,1.1) - d.st.spr*0.4; dmg=Math.max(1,dmg); dmg*=elemMult(el,d);
+  if(d.defend) dmg*=0.6; return {dmg:Math.round(dmg),el}; }
+
+function resolve(cmd,targets){
+  const a=cmd.actor;
+  if(cmd.kind==='attack'){ const t=targets[0]; if(!t)return; const r=physDmg(a,t); t.hp=clamp(t.hp-r.dmg,0,t.st.maxhp);
+    float(t,(r.crit?'✦':'')+r.dmg, r.el==='none'?'#fff5cf':elemColor(r.el)); hitFx(t); log(a.name+' attacks '+t.name+' for '+r.dmg+(r.crit?' (crit!)':'')+'.'); }
+  else if(cmd.kind==='magic'||cmd.kind==='summon'){ const act=cmd.action;
+    a.mp=clamp(a.mp-act.mp,0,a.st.maxmp);
+    if(act.heal){ const t=targets[0]; const amt=Math.round(a.st.mag*0.7+act.pow*3); t.hp=clamp(t.hp+amt,0,t.st.maxhp); float(t,'+'+amt,'#7fd97f'); log(a.name+' casts '+act.name+' — heals '+t.name+' '+amt+' HP.'); }
+    else { targets.forEach(t=>{ const r=magDmg(a,t,act.pow,act.el); t.hp=clamp(t.hp-r.dmg,0,t.st.maxhp); float(t,r.dmg,elemColor(act.el)); hitFx(t); });
+      log(a.name+' casts '+act.name+(cmd.action.deco.length?(' ['+cmd.action.deco.join('+')+']'):'')+' — '+targets.map(t=>t.name).join(', ')+'.'); }
+    if(act.summon) a.summonUsed=true;
+    gainAP(act.srcId, 30);
+  }
+  else if(cmd.kind==='item'){ const t=targets[0];
+    if(cmd.item==='potion'){ t.hp=clamp(t.hp+300,0,t.st.maxhp); float(t,'+300','#7fd97f'); log(a.name+' uses Potion on '+t.name+'.'); G.inventory.potion--; }
+    if(cmd.item==='ether'){ t.mp=clamp(t.mp+60,0,t.st.maxmp); float(t,'+60 MP','#6aa8e8'); log(a.name+' uses Ether on '+t.name+'.'); G.inventory.ether--; } }
+  else if(cmd.kind==='defend'){ a._willDefend=true; log(a.name+' takes a defensive stance.'); }
+  else if(cmd.kind==='enemySkill'){ const sk=a.skills[cmd.skillKey];
+    if(sk.self&&sk.buff==='haste'){ a.haste=1.7; log(a.name+' overclocks — speed surges!'); }
+    else if(sk.phys){ const t=targets[0]; if(!t)return; a.curPow=sk.pow||0; const r=physDmg(a,t); a.curPow=0; t.hp=clamp(t.hp-r.dmg,0,t.st.maxhp); float(t,r.dmg,'#ff8a8a'); heroHit(t); log(a.name+' uses '+sk.name+' on '+t.name+' — '+r.dmg+'.'); }
+    else { targets.forEach(t=>{ const r=magDmg(a,t,sk.pow,sk.el||ELEM.NONE); t.hp=clamp(t.hp-r.dmg,0,t.st.maxhp); float(t,r.dmg,'#ff8a8a'); heroHit(t); });
+      log(a.name+' unleashes '+sk.name+'!'); } }
+}
+function elemColor(el){ return {fire:'#ff9a5a',ice:'#8fd6ff',lightning:'#ffe07a',none:'#fff5cf'}[el]||'#fff5cf'; }
+function gainAP(id,ap){ if(!MATERIA_DB[id]||!MATERIA_DB[id].tiers)return; const before=materiaTier(id);
+  G.materiaLevels[id]=(G.materiaLevels[id]||0)+ap; const after=materiaTier(id);
+  if(after>before){ B._levelups=B._levelups||[]; B._levelups.push(MATERIA_DB[id].tiers[after].name); } }
+
+/* ---- outcome / waves ---- */
+function checkOutcome(){
+  if(B.over) return;
+  if(B.enemies.every(e=>e.hp<=0)){
+    if(B.wave < B.waves.length){ // next wave
+      const nxt=B.waves[B.wave++]; setTimeout(()=>{ if(B.over)return;
+        B.enemies=nxt.map((k,i)=>mkEnemy(k,String(i))); B.queue=[]; renderEnemies();
+        log('A stronger foe emerges!'); }, 500);
+    } else { victory(); }
+  } else if(B.heroes.every(h=>h.hp<=0)){ defeat(); }
+}
+function victory(){ B.over=true; endBattleCleanup();
+  let ap=B.enemies.reduce((s,e)=>s+(ENEMY_DB[e.key].xpAP||0),0)+400;
+  // distribute AP to all equipped magic/summon materia
+  const equipped=new Set(); Object.values(G.party).forEach(p=>p.slots.forEach(s=>{ if(s&&MATERIA_DB[s].tiers) equipped.add(s); }));
+  equipped.forEach(id=>gainAP(id, Math.round(ap/equipped.size)));
+  $('rTitle').textContent='Victory';
+  let s='Your party prevails. <b>'+ap+' AP</b> shared among equipped Materia.';
+  if(B._levelups&&B._levelups.length) s+='<br><br>✦ Materia grew: <b>'+[...new Set(B._levelups)].join(', ')+'</b> unlocked!';
+  s+='<br><br>Tip: the Mech-Draco is weak to <b>Ice</b>. Link <b>MP&nbsp;Turbo</b> to Blizzard, or <b>All</b> to hit the Gearlings at once.';
+  $('rSum').innerHTML=s; show('result');
+}
+function defeat(){ B.over=true; endBattleCleanup(); $('rTitle').textContent='Defeated';
+  $('rSum').innerHTML='Your champions fall. Adjust your Materia loadout and try again — link supports to your spells for the edge.'; show('result'); }
+
+/* ---- PLAYER INPUT ---- */
+function selectHero(h){ if(h.state!=='ready'||h.hp<=0) return; B.active=h; renderParty(); openCmd(h); }
+function openCmd(h){
+  $('hint').style.display='none'; $('submenu').style.display='none';
+  const g=$('cmdgrid'); g.style.display='grid';
+  g.innerHTML=`<button class="btn gold" data-c="attack">⚔ Attack</button>
+    <button class="btn" data-c="magic">✦ Magic</button>
+    ${h.spells.some(s=>s.summon)?'<button class="btn" data-c="summon">🜂 Summon</button>':'<button class="btn" data-c="defend">🛡 Defend</button>'}
+    <button class="btn" data-c="item">🧪 Item</button>
+    ${h.spells.some(s=>s.summon)?'<button class="btn" data-c="defend">🛡 Defend</button>':''}`;
+  g.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>cmdPick(h,b.dataset.c));
+}
+function closeCmd(){ $('cmdgrid').style.display='none'; $('submenu').style.display='none'; $('hint').style.display='block';
+  $('hint').textContent = (B&&B.heroes.some(h=>h.state==='ready'))?'Select a ready ally.':'Charging ATB…'; }
+function cmdPick(h,c){
+  if(c==='attack'){ beginTarget(h,{kind:'attack'},'enemyOne'); }
+  else if(c==='defend'){ commit({actor:h,kind:'defend',targets:[h]}); }
+  else if(c==='magic'||c==='summon'){ openSpells(h, c==='summon'); }
+  else if(c==='item'){ openItems(h); }
+}
+function openSpells(h,summonOnly){
+  const list=h.spells.filter(s=> summonOnly? s.summon : !s.summon);
+  let html=''; list.forEach((s,i)=>{ const dis=(h.mp<s.mp)||(s.summon&&h.summonUsed);
+    html+=`<button class="btn" data-s="${i}" ${dis?'disabled':''}>
+      <span>${s.name}${s.deco.length?' <span style="color:var(--sup)">['+s.deco.join('+')+']</span>':''}</span>
+      <span class="cost">${s.mp} MP</span></button>`; });
+  if(!html) html='<div style="grid-column:1/-1;color:var(--dim);font-size:12px;font-style:italic;padding:6px">No spells available.</div>';
+  html+='<button class="btn back" data-back="1">◀ Back</button>';
+  const sm=$('submenu'); sm.style.display='grid'; sm.innerHTML=html; $('cmdgrid').style.display='none';
+  sm.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ const act=list[+b.dataset.s];
+    if(act.heal){ beginTarget(h,{kind:'magic',action:act},'ally'); }
+    else if(act.target==='enemyAll'){ commit({actor:h,kind:act.summon?'summon':'magic',action:act,targets:B.enemies.filter(e=>e.hp>0)}); }
+    else { beginTarget(h,{kind:act.summon?'summon':'magic',action:act},'enemyOne'); } });
+  sm.querySelector('[data-back]').onclick=()=>openCmd(h);
+}
+function openItems(h){
+  const sm=$('submenu'); sm.style.display='grid'; $('cmdgrid').style.display='none'; let html='';
+  if(G.inventory.potion>0) html+=`<button class="btn" data-i="potion"><span>Potion +300 HP</span><span class="cost">×${G.inventory.potion}</span></button>`;
+  if(G.inventory.ether>0) html+=`<button class="btn" data-i="ether"><span>Ether +60 MP</span><span class="cost">×${G.inventory.ether}</span></button>`;
+  if(!html) html='<div style="grid-column:1/-1;color:var(--dim);font-size:12px;font-style:italic;padding:6px">No items.</div>';
+  html+='<button class="btn back" data-back="1">◀ Back</button>'; sm.innerHTML=html;
+  sm.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>beginTarget(h,{kind:'item',item:b.dataset.i},'ally'));
+  sm.querySelector('[data-back]').onclick=()=>openCmd(h);
+}
+function beginTarget(h,partial,mode){
+  B.targeting={actor:h,partial,mode};
+  $('cmdgrid').style.display='none'; $('submenu').style.display='none'; $('hint').style.display='block';
+  $('hint').textContent = mode==='ally' ? 'Tap an ally to target.' : 'Tap a foe to target.';
+  renderEnemies(); renderParty();
+}
+function pickTarget(t){
+  if(!B.targeting) return; const {actor,partial,mode}=B.targeting;
+  if(mode==='ally' && t.side!=='hero') return; if(mode!=='ally' && t.side!=='enemy') return;
+  if(t.hp<=0 && mode!=='ally') return;
+  commit(Object.assign({actor,targets:[t]},partial));
+}
+function commit(cmd){ B.targeting=null; B.active=null; closeCmd();
+  cmd.actor.state='exec'; // lock so it won't re-ready; executor resets atb
+  enqueue(cmd); renderEnemies(); renderParty();
+}
+
+/* ---- RENDER ---- */
+function show(id){ document.querySelectorAll('.scr').forEach(s=>s.classList.remove('show')); $(id).classList.add('show'); }
+function log(t){ $('blog').textContent=t; }
+function renderEnemies(){
+  const z=$('enemies'); [...z.querySelectorAll('.enemy')].forEach(n=>n.remove());
+  B.enemies.forEach((e,i)=>{ const el=document.createElement('div'); el.className='enemy'; if(e.hp<=0)el.classList.add('dead'); el.dataset.i=i;
+    const wk=e.weak&&e.weak!=='none'?`<div class="weaktag">weak: ${e.weak}</div>`:'';
+    el.innerHTML=`<div class="spr">${e.spr}</div><div class="en">${e.name}</div><div class="ehp"><i style="width:${Math.max(0,e.hp/e.st.maxhp*100)}%"></i></div>${wk}`;
+    el.onclick=()=>{ if(B.targeting) pickTarget(e); };
+    if(B.targeting && B.targeting.mode!=='ally' && e.hp>0) el.classList.add('tgt');
+    z.appendChild(el); });
+}
+function renderParty(){
+  const p=$('party'); p.innerHTML='';
+  B.heroes.forEach(h=>{ const row=document.createElement('div'); row.className='prow';
+    if(h.hp<=0)row.classList.add('pdead'); if(h.state==='ready')row.classList.add('ready'); if(B.active===h)row.classList.add('active');
+    row.innerHTML=`<div class="pn">${h.spr} ${h.name}<small>${h.role}</small></div>
+      <div class="pbars">
+        <div class="lbar hp"><i style="width:${h.hp/h.st.maxhp*100}%"></i></div>
+        <div class="pnum"><span>HP ${Math.ceil(h.hp)}/${h.st.maxhp}</span><span>MP ${Math.ceil(h.mp)}/${h.st.maxmp}</span></div>
+        <div class="lbar mp"><i style="width:${h.mp/h.st.maxmp*100}%"></i></div>
+        <div class="lbar atb ${h.atb>=ATB_MAX?'full':''}"><i style="width:${h.atb}%"></i></div>
+      </div>`;
+    row.onclick=()=>{ if(B.targeting) pickTarget(h); else if(h.state==='ready'&&!B.executing) selectHero(h); };
+    p.appendChild(row); });
+}
+function updateGauges(){ // lightweight per-frame gauge width update
+  const rows=$('party').children;
+  B.heroes.forEach((h,i)=>{ const r=rows[i]; if(!r)return; const bars=r.querySelectorAll('.lbar');
+    const atb=bars[2]; if(atb){ atb.firstElementChild.style.width=h.atb+'%'; atb.classList.toggle('full',h.atb>=ATB_MAX); }
+    if(h.state==='ready') r.classList.add('ready'); else if(B.active!==h) r.classList.remove('ready'); });
+}
+function markActing(c,on){ if(c.side==='enemy'){ const el=$('enemies').querySelector('.enemy[data-i="'+B.enemies.indexOf(c)+'"]'); if(el)el.classList.toggle('acting',on); } }
+function hitFx(t){ if(t.side==='enemy'){ const el=$('enemies').querySelector('.enemy[data-i="'+B.enemies.indexOf(t)+'"]'); if(el){el.classList.add('hit');setTimeout(()=>el.classList.remove('hit'),300);} } }
+function heroHit(t){ const rows=$('party').children; const el=rows[B.heroes.indexOf(t)]; if(el){el.style.transform='translateX(-5px)';setTimeout(()=>el.style.transform='',140);} }
+function float(t,txt,color){ const layer=$('bfloat'); let x='50%',y='40%';
+  if(t.side==='enemy'){ const el=$('enemies').querySelector('.enemy[data-i="'+B.enemies.indexOf(t)+'"]'); if(el){const r=el.getBoundingClientRect(),lr=layer.getBoundingClientRect(); x=(r.left-lr.left+r.width/2-14)+'px'; y=(r.top-lr.top+18)+'px'; } }
+  else { x=(20+B.heroes.indexOf(t)*4)+'%'; y='78%'; }
+  const f=document.createElement('div'); f.className='dmg'; f.textContent=txt; f.style.color=color; f.style.left=x; f.style.top=y;
+  layer.appendChild(f); setTimeout(()=>f.remove(),1000); }
+
+/* ---- mode toggle (Active/Wait) ---- */
+$('modeBtn').onclick=()=>{ if(!B)return; B.mode=B.mode==='wait'?'active':'wait'; $('modeBtn').textContent='Mode: '+B.mode.toUpperCase(); };
+
+/* ==================== LOADOUT SCREEN ==================== */
+let pickCtx=null;
+function renderLoadout(){
+  const body=$('loadbody'); body.innerHTML='';
+  Object.keys(G.party).forEach(hid=>{
+    const h=HERO_BASE[hid], st=computeStats(hid), spells=heroSpells(hid), wel=weaponElement(hid);
+    const card=document.createElement('div'); card.className='hero-card';
+    let slotsHtml='';
+    G.party[hid].slots.forEach((id,idx)=>{
+      const m=id?MATERIA_DB[id]:null; const cls=m?('slot '+m.type):'slot';
+      slotsHtml+=`<div class="${cls}" data-h="${hid}" data-slot="${idx}">${m?m.ic:'+'}</div>`;
+      if(idx===1||idx===3){} // spacing
+      if(idx===1) slotsHtml=slotsHtml; // linked pair rendering handled by order
+    });
+    // build with link brackets: slots 0-1 linked, 2-3 linked
+    const s=G.party[hid].slots;
+    function slotEl(idx){ const m=s[idx]?MATERIA_DB[s[idx]]:null; const cls=m?('slot '+m.type):'slot';
+      return `<div class="${cls}" data-h="${hid}" data-slot="${idx}">${m?m.ic:'+'}</div>`; }
+    const slotsRow=`<div class="slots">${slotEl(0)}<span class="link"></span>${slotEl(1)}
+       <span style="width:8px"></span>${slotEl(2)}<span class="link"></span>${slotEl(3)}</div>`;
+    let deco='';
+    spells.forEach(sp=>{ if(sp.deco.length) deco+=`◆ ${sp.name} → ${sp.deco.join('+')} `; });
+    if(wel!=='none') deco+=`◆ Weapon element: ${wel} `;
+    card.innerHTML=`<div class="hn"><span>${h.spr} ${h.name}</span><span style="color:var(--dim);font-size:11px">${h.role}</span></div>
+      <div class="st">HP ${st.maxhp} · MP ${st.maxmp} · STR ${st.str} · MAG ${st.mag} · VIT ${st.vit} · DEX ${st.dex}</div>
+      ${slotsRow}
+      ${deco?`<div class="deco">${deco}</div>`:''}`;
+    body.appendChild(card);
+  });
+  body.querySelectorAll('.slot').forEach(el=>el.onclick=()=>openPicker(el.dataset.h,+el.dataset.slot));
+}
+function openPicker(hid,slot){
+  pickCtx={hid,slot}; const box=$('pickopts');
+  // available: none + any materia not equipped elsewhere (allow same across heroes for demo simplicity: forbid duplicates within same hero only)
+  const used=new Set(G.party[hid].slots.filter((x,i)=>i!==slot&&x));
+  let html=`<div class="mopt" data-m="none"><div class="mo" style="border-color:var(--line)">✕</div><div class="mt">Empty slot</div></div>`;
+  Object.values(MATERIA_DB).forEach(m=>{ if(used.has(m.id))return;
+    const desc = m.tiers? ('spells: '+m.tiers.map(t=>t.name).join(' / ')) : (m.d||'');
+    html+=`<div class="mopt" data-m="${m.id}"><div class="mo" style="border-color:${m.color}">${m.ic}</div>
+      <div class="mt">${m.name} <small>${m.type} · ${desc}</small></div></div>`; });
+  box.innerHTML=html;
+  box.querySelectorAll('.mopt').forEach(o=>o.onclick=()=>{ const v=o.dataset.m; G.party[hid].slots[slot]= v==='none'?null:v; $('picker').style.display='none'; renderLoadout(); });
+  $('picker').style.display='flex';
+}
+
+/* ==================== ARCHITECTURE INFO ==================== */
+const ARCH=[
+  ['ATB Engine — State Machine','Each unit charges independently (Dex×Haste): IDLE → GAUGE_FULL → COMMAND_PENDING → EXECUTING → RESET. Watch the cyan gauges fill in real time.'],
+  ['Action Queue + Serial Pipeline','Concurrent timing, serial resolution. Commands are objects pushed to a queue; one executor locks the actor, animates, runs the damage modeler, applies effects, then releases (Command Pattern).'],
+  ['Materia — Decorator / Strategy','Green Magic + blue Support in Linked slots: All → multi-target (−power), MP Turbo → ×1.5 power/×2 MP, Elemental → weapon gains element. Set it in Materia Loadout.'],
+  ['Enemy AI — Interpreter / Bytecode','Each foe carries data opcodes (IF_HP_BELOW / EVERY / ELSE) read against live battle memory (self HP%, turn) to choose a skill + target. Designers edit data, not code.'],
+  ['Stat Recompute Pipeline','Final = Base × ∏ Materia multipliers + Σ Materia bonuses + equipment. Recomputed whenever a slot changes (see live stats in Loadout).'],
+  ['Flyweight + Factory','Immutable MATERIA_DB / ENEMY_DB read once; battle spawns lightweight instances carrying only runtime state (HP, ATB, buffs).']
+];
+function renderArch(){ $('archbody').innerHTML=ARCH.map(a=>`<div class="arow"><b>${a[0]}</b><span>${a[1]}</span></div>`).join(''); }
+
+/* ==================== NAV ==================== */
+$('mBattle').onclick=startBattle;
+$('mLoad').onclick=()=>{ renderLoadout(); show('load'); };
+$('mArch').onclick=()=>{ renderArch(); show('arch'); };
+$('archBack').onclick=()=>show('title');
+$('loadBack').onclick=()=>show('title');
+$('loadBattle').onclick=startBattle;
+$('rBack').onclick=()=>{ show('title'); };
+</script>
+</body>
+</html>

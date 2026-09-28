@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>AETHERBORNE — The Sundered Realm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0e0b1a; --void2:#141026; --panel:#191330; --panel2:#221a3f;
+    --line:#3a2f5e; --brass:#c9a24b; --brass-dim:#8f7233;
+    --aether:#57e0c8; --ember:#ff7a4d; --claret:#c23a55; --claret-deep:#7a1f31;
+    --ink:#ece4d1; --ink-dim:#a89f8e; --good:#7fd97f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none;}
+  html,body{margin:0;height:100%;background:var(--void);color:var(--ink);
+    font-family:'Spectral',Georgia,serif; overflow:hidden;}
+  #game{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 120% at 50% 10%, #1a1330 0%, #0b0817 70%);}
+  #stage{position:relative;width:100%;height:100%;max-width:520px;max-height:920px;
+    margin:auto;overflow:hidden;}
+  canvas{display:block;width:100%;height:100%;image-rendering:auto;background:#0b0817;}
+
+  /* ---------- shared panel styling ---------- */
+  .panel{position:absolute;background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line);box-shadow:0 8px 40px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.03);}
+  .ttl{font-family:'Cinzel',serif;letter-spacing:.04em;color:var(--brass);}
+  .btn{font-family:'Cinzel',serif;letter-spacing:.03em;background:linear-gradient(180deg,#2a2148,#1c1636);
+    color:var(--ink);border:1px solid var(--line);padding:11px 12px;border-radius:0;cursor:pointer;
+    font-size:14px;transition:transform .05s, background .15s, border-color .15s;}
+  .btn:active{transform:translateY(1px);}
+  .btn:hover{border-color:var(--brass-dim);}
+  .btn.gold{border-color:var(--brass-dim);color:var(--brass);}
+  .btn.on{background:linear-gradient(180deg,#3a2b1c,#2a1f14);border-color:var(--brass);color:var(--brass);}
+  .btn:disabled{opacity:.35;cursor:default;}
+
+  /* ---------- HUD ---------- */
+  #hud{position:absolute;inset:0;pointer-events:none;}
+  #topbar{position:absolute;top:0;left:0;right:0;padding:8px 10px;display:flex;gap:8px;align-items:center;
+    background:linear-gradient(180deg,rgba(8,6,18,.85),rgba(8,6,18,0));pointer-events:none;}
+  .stat{font-size:12px;color:var(--ink-dim);}
+  .bar{height:9px;background:#0c0a18;border:1px solid var(--line);position:relative;width:96px;}
+  .bar>i{position:absolute;inset:0;display:block;}
+  .bar.hp>i{background:linear-gradient(90deg,#c23a55,#ff7a4d);}
+  .bar.mp>i{background:linear-gradient(90deg,#2f6f9e,#57e0c8);}
+  .bar.xp>i{background:linear-gradient(90deg,#8f7233,#c9a24b);}
+  #objective{position:absolute;top:56px;left:10px;right:10px;font-size:12.5px;color:var(--brass);
+    text-shadow:0 1px 2px #000;pointer-events:none;font-style:italic;}
+
+  #dpad{position:absolute;left:14px;bottom:22px;width:150px;height:150px;pointer-events:auto;}
+  .dbtn{position:absolute;width:50px;height:50px;background:rgba(30,22,54,.72);border:1px solid var(--line);
+    color:var(--ink);font-size:20px;display:flex;align-items:center;justify-content:center;border-radius:8px;}
+  .dbtn:active{background:rgba(60,45,90,.9);}
+  #du{left:50px;top:0}#dd{left:50px;top:100px}#dl{left:0;top:50px}#dr{left:100px;top:50px}
+
+  #actions{position:absolute;right:14px;bottom:22px;width:150px;height:150px;pointer-events:auto;}
+  .abtn{position:absolute;width:64px;height:64px;border-radius:50%;font-family:'Cinzel',serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;
+    border:1px solid var(--line);background:rgba(30,22,54,.8);color:var(--ink);font-size:12px;}
+  .abtn small{font-size:9px;color:var(--ink-dim);}
+  .abtn:active{transform:scale(.94);}
+  #aAct{right:44px;bottom:70px;border-color:var(--brass);color:var(--brass);}
+  #aMenu{right:0;bottom:6px;}
+
+  /* ---------- dialogue / toast ---------- */
+  #dialogue{left:10px;right:10px;bottom:14px;padding:14px 16px;display:none;pointer-events:auto;z-index:60;}
+  #dspeaker{font-family:'Cinzel',serif;color:var(--brass);font-size:13px;margin-bottom:5px;}
+  #dtext{font-size:15px;line-height:1.45;min-height:52px;}
+  #dnext{position:absolute;right:14px;bottom:8px;color:var(--aether);font-size:12px;animation:blink 1s infinite;}
+  @keyframes blink{50%{opacity:.2}}
+  #toast{position:absolute;left:50%;top:96px;transform:translateX(-50%);background:rgba(12,10,24,.94);
+    border:1px solid var(--brass-dim);color:var(--brass);padding:9px 16px;font-size:13px;display:none;
+    font-family:'Cinzel',serif;text-align:center;max-width:88%;pointer-events:none;z-index:40;}
+
+  /* ---------- full-screen overlays ---------- */
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;pointer-events:auto;z-index:30;}
+  .screen.show{display:flex;}
+
+  /* Title */
+  #title{align-items:center;justify-content:center;text-align:center;
+    background:radial-gradient(120% 100% at 50% 0%, #241a44 0%, #0b0817 65%);}
+  #title h1{font-family:'Cinzel',serif;font-weight:700;font-size:40px;margin:0;color:var(--brass);
+    letter-spacing:.08em;text-shadow:0 0 26px rgba(201,162,75,.4);}
+  #title .sub{color:var(--aether);font-style:italic;margin:8px 0 30px;letter-spacing:.14em;font-size:14px;}
+  #title .glow{font-size:56px;margin-bottom:6px;filter:drop-shadow(0 0 18px rgba(87,224,200,.5));}
+  #title .menu{display:flex;flex-direction:column;gap:12px;width:220px;}
+  #title .credit{position:absolute;bottom:14px;font-size:11px;color:var(--ink-dim);letter-spacing:.1em;}
+
+  /* Story intro */
+  #intro{background:#07050f;padding:34px 26px;justify-content:center;}
+  #introtext{font-size:16px;line-height:1.7;color:var(--ink);max-width:440px;margin:0 auto;font-style:italic;}
+  #intro .go{margin:26px auto 0;width:180px;}
+
+  /* Battle */
+  #battle{background:linear-gradient(180deg,#120c24 0%,#1a0f22 100%);}
+  #enemyzone{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:24px 14px 6px;position:relative;}
+  .enemy{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:90px;cursor:pointer;}
+  .enemy .spr{font-size:52px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.6));transition:transform .1s;}
+  .enemy.hurt .spr{animation:shake .3s;}
+  .enemy.dead{opacity:0;transform:scale(.5) rotate(20deg);transition:.4s;pointer-events:none;}
+  .enemy.target .name{color:var(--ember);}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .enemy .name{font-size:12px;color:var(--ink);}
+  .ebar{width:88px;height:8px;background:#0c0a18;border:1px solid var(--line);position:relative;}
+  .ebar>i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#7a1f31,#c23a55);}
+  .segbar{width:150px;height:14px;background:#0c0a18;border:1px solid var(--claret);position:relative;display:flex;}
+  .segbar .seg{flex:1;border-right:1px solid #0c0a18;background:linear-gradient(180deg,#e0424e,#8a1f2c);}
+  .segbar .seg.empty{background:#160c14;}
+  #floaters{position:absolute;inset:0;pointer-events:none;}
+  .float{position:absolute;font-family:'Cinzel',serif;font-weight:700;font-size:22px;
+    animation:fl 1s ease-out forwards;text-shadow:0 2px 4px #000;}
+  @keyframes fl{0%{opacity:0;transform:translateY(6px) scale(.7)}20%{opacity:1;transform:translateY(-6px) scale(1.15)}100%{opacity:0;transform:translateY(-42px)}}
+  #barbreak{position:absolute;top:38%;left:50%;transform:translateX(-50%);font-family:'Cinzel',serif;
+    font-weight:700;font-size:30px;color:var(--brass);text-shadow:0 0 20px var(--ember);display:none;
+    letter-spacing:.06em;animation:pop .7s ease-out;}
+  @keyframes pop{0%{transform:translateX(-50%) scale(.4);opacity:0}30%{transform:translateX(-50%) scale(1.2);opacity:1}100%{transform:translateX(-50%) scale(1);opacity:1}}
+
+  #herozone{display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);background:rgba(9,7,20,.6);}
+  #herospr{font-size:34px;transition:transform .12s;min-width:72px;}
+  .enemy .spr canvas,#herospr canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;}
+  #herostats{flex:1;font-size:12px;}
+  #herostats .row{display:flex;align-items:center;gap:7px;margin:2px 0;}
+  #battlelog{height:34px;padding:4px 14px;font-size:12.5px;color:var(--ink-dim);font-style:italic;overflow:hidden;}
+  #bmenu{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px 16px;}
+  #bsub{display:none;grid-template-columns:1fr 1fr;gap:7px;padding:0 12px 14px;max-height:190px;overflow:auto;}
+  #bsub .btn{font-size:12.5px;text-align:left;display:flex;justify-content:space-between;gap:6px;}
+  #bsub .cost{color:var(--aether);font-size:11px;}
+  .backb{grid-column:1/-1;}
+
+  /* Menu (pause) */
+  #menu{background:rgba(7,5,15,.96);padding:0;}
+  #menutabs{display:flex;border-bottom:1px solid var(--line);}
+  #menutabs .tab{flex:1;padding:12px 4px;text-align:center;font-family:'Cinzel',serif;font-size:12px;
+    color:var(--ink-dim);border-right:1px solid var(--line);background:#120d26;cursor:pointer;}
+  #menutabs .tab.on{color:var(--brass);background:#1c1638;}
+  #menubody{flex:1;overflow:auto;padding:14px;}
+  #menuclose{margin:10px 14px 16px;}
+  .card{border:1px solid var(--line);background:#150f2c;padding:10px 12px;margin-bottom:9px;}
+  .card h4{margin:0 0 4px;font-family:'Cinzel',serif;font-size:13px;color:var(--brass);display:flex;justify-content:space-between;}
+  .card .d{font-size:12px;color:var(--ink-dim);line-height:1.4;}
+  .tag{display:inline-block;font-size:10px;padding:1px 6px;border:1px solid var(--line);color:var(--aether);margin-right:4px;}
+  .tag.fire{color:#ff8a5a;border-color:#7a3320}.tag.ice{color:#8fd6ff;border-color:#22506e}
+  .tag.bolt{color:#ffe07a;border-color:#7a6a20}.tag.void{color:#c58aff;border-color:#4a2870}
+  .rar-common{color:var(--ink)} .rar-rare{color:var(--aether)} .rar-epic{color:#c58aff} .rar-legend{color:var(--brass)}
+  .slotrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid #201938;}
+  .kv b{color:var(--brass);font-weight:600;}
+  .hint{font-size:11.5px;color:var(--ink-dim);font-style:italic;margin:4px 0 12px;}
+
+  /* Loot / event popup */
+  #loot{align-items:center;justify-content:center;background:rgba(7,5,15,.92);}
+  #lootbox{width:88%;max-width:360px;padding:22px;text-align:center;}
+  #lootbox .ic{font-size:52px;filter:drop-shadow(0 0 20px var(--brass));}
+  #lootbox h3{font-family:'Cinzel',serif;color:var(--brass);margin:10px 0 4px;}
+  #lootbox p{font-size:13.5px;color:var(--ink-dim);line-height:1.5;margin:6px 0 16px;}
+
+  /* Shop */
+  #shopbody{flex:1;overflow:auto;padding:14px;}
+  .shopitem{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .shopitem .btn{padding:7px 12px;font-size:12px;}
+
+  .center{display:flex;align-items:center;justify-content:center;}
+</style>
+</head>
+<body>
+<div id="game"><div id="stage">
+  <canvas id="cv"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="topbar">
+      <span id="heroicon" style="font-size:22px">🗡️</span>
+      <div>
+        <div class="stat">Lv <b id="tLv">1</b> · <span id="tName">Wanderer</span></div>
+        <div style="display:flex;gap:6px;margin-top:3px">
+          <div class="bar hp"><i id="tHp"></i></div>
+          <div class="bar mp"><i id="tMp"></i></div>
+        </div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div class="stat">◈ <b id="tGold">0</b></div>
+        <div class="bar xp" style="width:70px;margin-top:4px"><i id="tXp"></i></div>
+      </div>
+    </div>
+    <div id="objective">◆ …</div>
+
+    <div id="dpad">
+      <div class="dbtn" id="du">▲</div><div class="dbtn" id="dd">▼</div>
+      <div class="dbtn" id="dl">◀</div><div class="dbtn" id="dr">▶</div>
+    </div>
+    <div id="actions">
+      <div class="abtn" id="aAct">USE<small id="aActLbl">—</small></div>
+      <div class="abtn" id="aMenu">MENU</div>
+    </div>
+
+    <div id="toast"></div>
+
+    <div class="panel" id="dialogue">
+      <div id="dspeaker"></div>
+      <div id="dtext"></div>
+      <div id="dnext">▼ tap</div>
+    </div>
+  </div>
+
+  <!-- TITLE -->
+  <div class="screen show" id="title">
+    <div class="glow">🜂</div>
+    <h1>AETHERBORNE</h1>
+    <div class="sub">THE&nbsp;SUNDERED&nbsp;REALM</div>
+    <div class="menu">
+      <button class="btn gold" id="btnNew">New Journey</button>
+      <button class="btn" id="btnCont">Continue</button>
+      <button class="btn" id="btnHelp">How to Play</button>
+    </div>
+    <div class="credit">A vertical-slice prototype</div>
+  </div>
+
+  <!-- INTRO -->
+  <div class="screen" id="intro">
+    <div id="introtext"></div>
+    <button class="btn gold go" id="introGo">Begin ▶</button>
+  </div>
+
+  <!-- BATTLE -->
+  <div class="screen" id="battle">
+    <div id="enemyzone">
+      <div id="floaters"></div>
+      <div id="barbreak">BAR&nbsp;BREAK!</div>
+    </div>
+    <div id="herozone">
+      <div id="herospr"></div>
+      <div id="herostats">
+        <div class="row">HP <div class="bar hp" style="width:130px"><i id="bHp"></i></div> <span id="bHpN"></span></div>
+        <div class="row">MP <div class="bar mp" style="width:130px"><i id="bMp"></i></div> <span id="bMpN"></span></div>
+      </div>
+    </div>
+    <div id="battlelog"></div>
+    <div id="bmenu">
+      <button class="btn gold" data-b="attack">Attack</button>
+      <button class="btn" data-b="skill">Skills</button>
+      <button class="btn" data-b="item">Items</button>
+      <button class="btn" data-b="flee">Flee</button>
+    </div>
+    <div id="bsub"></div>
+  </div>
+
+  <!-- MENU -->
+  <div class="screen" id="menu">
+    <div id="menutabs">
+      <div class="tab on" data-t="status">Hero</div>
+      <div class="tab" data-t="skills">Skills</div>
+      <div class="tab" data-t="gear">Gear</div>
+      <div class="tab" data-t="items">Items</div>
+      <div class="tab" data-t="quest">Quest</div>
+    </div>
+    <div id="menubody"></div>
+    <button class="btn menuclose" id="menuclose">Close</button>
+  </div>
+
+  <!-- LOOT -->
+  <div class="screen" id="loot">
+    <div class="panel" id="lootbox">
+      <div class="ic" id="lootIc">📦</div>
+      <h3 id="lootTitle"></h3>
+      <p id="lootDesc"></p>
+      <button class="btn gold" id="lootOk" style="width:160px">Claim</button>
+    </div>
+  </div>
+
+  <!-- SHOP -->
+  <div class="screen" id="shop">
+    <div id="menutabs"><div class="tab on" style="flex:1">⚖ Wandering Merchant</div></div>
+    <div id="shopbody"></div>
+    <button class="btn menuclose" id="shopclose">Leave</button>
+  </div>
+
+</div></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   AETHERBORNE — a compact open-world JRPG (Wild Arms + Final Fantasy inspired)
+   Single-file prototype. Touch + keyboard. All systems: exploration, ARM tools,
+   ship & wyvern mounts, secret vaults, stat-multiplying gear, craftable skills
+   with runes, segmented boss bars ("BAR BREAK"), story & ending.
+   ============================================================================ */
+const $=id=>document.getElementById(id);
+const cv=$('cv'), ctx=cv.getContext('2d');
+
+/* ---------- world tiles ---------- */
+const T={ DEEP:'d',WATER:'w',SAND:'s',GRASS:'.',FOREST:'f',MTN:'M',WALL:'#',
+  CRACK:'x',CHASM:'v',TOWN:'T',DOCK:'K',VAULT:'V',CAVE:'C',SHRINE:'@',
+  ROOST:'Y',CITADEL:'B',CHEST:'*',HOUSE:'H' };
+const WORLD_W=48, WORLD_H=32;
+let MAP=[]; // 2D array of chars
+
+/* ============================================================================
+   PIXEL-ART ENGINE  — sprites are lists of [x,y,w,h,color] rects on a 16×16 grid
+   ============================================================================ */
+let AT=0; // animation time (seconds)
+const C={
+  ol:'#140f22', dk:'#241d3a', bk:'#0b0813',
+  sk:'#e0b489', sk2:'#c2946a', hair:'#5a3b22',
+  cy:'#57e0c8', cy2:'#2f9f92',
+  go:'#e8c15a', go2:'#b8862f', gold:'#e8c15a', crown:'#ffe08a',
+  rd:'#e2506a', rd2:'#9c2840',
+  gr:'#4f7d54', gr2:'#345a3b', gr3:'#26482e',
+  st:'#9a94a6', st2:'#6a6478', st3:'#443f56', stone:'#8a8494', stoneD:'#4a4556',
+  wt:'#f4eeda',
+  pu:'#a066cc', pu2:'#6a3c96', pu3:'#3a2358',
+  em:'#ff8a4d', em2:'#c2551f',
+  wd:'#4a8fbe', wdp:'#1d4a70',
+  wood:'#7a5230', wood2:'#5a3b22', wood3:'#9c6e3e',
+  fur:'#9c6238', fur2:'#6e4326', fur3:'#c98a4e',
+  gh:'#cdd8ea', gh2:'#8fa0bd',
+  steel:'#9aa7c8', steel2:'#5f6d86',
+  sand:'#dcc98e', sand2:'#b39a63'
+};
+const SPR={
+  hero:[[6,2,4,1,C.hair],[5,3,6,2,C.hair],[6,4,4,3,C.sk],[6,5,1,1,C.ol],[9,5,1,1,C.ol],
+    [7,6,2,1,C.sk2],[5,7,6,1,C.cy2],[4,8,1,4,C.cy],[11,8,1,4,C.cy],[5,8,6,4,C.go],
+    [7,8,1,4,C.go2],[5,8,1,1,C.sk],[10,8,1,1,C.sk],[5,12,2,3,C.wood2],[9,12,2,3,C.wood2],
+    [5,15,2,1,C.ol],[9,15,2,1,C.ol],[11,6,1,6,C.steel],[10,6,2,1,C.go]],
+  ship:[[3,9,10,4,C.wood],[3,9,10,1,C.wood3],[4,13,8,1,C.wood2],[7,2,2,8,C.wood2],
+    [8,3,5,6,C.wt],[8,3,5,1,C.gh2],[8,3,1,6,C.gh2],[3,8,10,1,C.cy2]],
+  wyvern:[[6,2,4,3,C.pu2],[6,3,1,1,C.rd],[9,3,1,1,C.rd],[7,5,2,4,C.pu],[5,6,6,4,C.pu2],
+    [2,6,3,3,C.pu3],[11,6,3,3,C.pu3],[1,7,2,2,C.pu],[13,7,2,2,C.pu],[6,10,4,3,C.pu],
+    [7,13,2,2,C.pu2],[8,15,1,1,C.rd],[5,5,1,1,C.pu],[10,5,1,1,C.pu]],
+  npc:[[6,1,4,1,C.hair],[6,2,4,3,C.sk],[6,3,1,1,C.ol],[9,3,1,1,C.ol],[5,5,6,8,C.st2],
+    [5,5,6,1,C.st],[7,6,2,6,C.st3],[5,13,6,1,C.st3],[11,4,1,9,C.wood2],[10,3,2,2,C.go]],
+  tree:[[7,10,2,5,C.wood2],[4,3,8,6,C.gr2],[3,5,10,4,C.gr2],[5,2,6,3,C.gr],
+    [4,4,3,2,C.gr],[9,4,3,2,C.gr],[6,7,4,2,C.gr3]],
+  mtn:[[2,10,12,5,C.stoneD],[3,5,10,6,C.st2],[5,2,6,5,C.stone],[6,2,4,3,C.wt],
+    [4,8,8,1,C.stoneD],[8,4,3,6,C.stoneD]],
+  boulder:[[3,6,10,8,C.st2],[4,5,8,2,C.stone],[3,13,10,1,C.stoneD],[5,8,3,2,C.stoneD],[9,9,2,2,C.stoneD]],
+  rubble:[[3,12,3,2,C.st2],[7,13,3,1,C.stone],[11,12,2,2,C.stoneD],[5,11,2,1,C.stone]],
+  chasm:[[2,3,12,10,C.bk],[2,3,12,1,C.pu3],[2,12,12,1,C.pu3],[3,4,1,8,C.pu2],[12,4,1,8,C.pu2],
+    [5,6,2,1,C.pu],[9,8,2,1,C.pu]],
+  dock:[[2,5,12,6,C.wood],[2,5,12,1,C.wood3],[2,7,12,1,C.wood2],[2,9,12,1,C.wood2],
+    [3,4,1,8,C.wood2],[12,4,1,8,C.wood2]],
+  vault:[[3,2,10,13,C.st3],[4,3,8,11,C.st2],[4,3,8,1,C.stone],[7,3,2,11,C.st3],
+    [6,7,4,3,C.go],[7,8,2,1,C.go2],[5,4,1,9,C.stone],[10,4,1,9,C.stone]],
+  cave:[[2,3,12,11,C.st3],[3,2,10,2,C.st2],[5,6,6,8,C.bk],[5,6,6,2,C.dk],[4,13,8,1,C.stoneD]],
+  shrine:[[5,10,6,4,C.st2],[4,13,8,1,C.st3],[7,3,2,7,C.cy],[6,5,4,4,C.cy2],[7,2,2,2,C.wt],[6,4,1,4,C.wt]],
+  roost:[[3,9,10,5,C.wood2],[3,9,10,1,C.wood3],[4,11,8,2,C.wood],[6,6,4,5,C.gh],[6,6,2,2,C.wt],[7,7,1,1,C.pu2]],
+  citadel:[[3,5,10,10,C.st3],[3,4,2,2,C.st3],[7,3,2,2,C.st3],[11,4,2,2,C.st3],[4,6,8,8,C.st2],
+    [7,9,2,5,C.bk],[5,7,1,2,C.rd],[10,7,1,2,C.rd],[7,6,2,2,C.rd2],[3,14,10,1,C.stoneD]],
+  chest:[[3,7,10,7,C.wood2],[3,6,10,3,C.wood],[3,6,10,1,C.wood3],[3,9,10,1,C.go2],
+    [7,8,2,3,C.go],[7,9,2,1,C.bk],[3,13,10,1,C.bk]],
+  house:[[3,7,10,7,C.wood],[2,4,12,4,C.rd2],[2,4,12,1,C.rd],[6,9,3,5,C.wood2],
+    [4,9,2,2,C.cy2],[10,9,2,2,C.cy2],[3,13,10,1,C.wood2]],
+  wolf:[[3,6,9,5,C.fur2],[3,5,4,4,C.fur],[2,4,2,2,C.fur2],[4,4,1,2,C.fur2],[3,6,1,1,C.rd],
+    [2,7,2,1,C.ol],[11,7,2,3,C.fur2],[4,11,1,3,C.fur2],[6,11,1,3,C.fur2],[9,11,1,3,C.fur2],
+    [11,11,1,3,C.fur2],[3,5,4,1,C.fur3]],
+  bat:[[6,6,4,4,C.pu2],[7,7,1,1,C.rd],[8,7,1,1,C.rd],[2,4,4,4,C.pu3],[10,4,4,4,C.pu3],
+    [1,5,2,2,C.pu2],[13,5,2,2,C.pu2],[5,3,2,2,C.pu2],[9,3,2,2,C.pu2],[6,10,4,2,C.pu3]],
+  scorp:[[5,8,6,4,C.em2],[4,9,8,2,C.em],[2,7,2,2,C.em2],[3,6,2,2,C.em2],[12,7,2,2,C.em2],
+    [11,6,2,2,C.em2],[8,3,2,5,C.em2],[9,2,2,2,C.rd],[5,11,1,2,C.em2],[7,11,1,2,C.em2],[9,11,1,2,C.em2]],
+  golem:[[4,3,8,6,C.st2],[4,3,8,1,C.stone],[5,5,2,2,C.cy],[9,5,2,2,C.cy],[3,9,10,5,C.st3],
+    [2,9,2,4,C.st2],[12,9,2,4,C.st2],[5,7,6,1,C.cy2],[4,14,3,1,C.stoneD],[9,14,3,1,C.stoneD]],
+  wraith:[[5,3,6,6,C.gh],[4,5,8,6,C.gh2],[6,5,1,2,C.pu3],[9,5,1,2,C.pu3],[4,11,2,3,C.gh2],
+    [7,11,2,3,C.gh2],[10,11,2,3,C.gh2],[5,3,6,1,C.wt],[6,7,4,1,C.pu2]],
+  drake:[[5,3,5,4,C.em2],[6,4,1,1,C.go],[8,4,1,1,C.go],[4,7,8,5,C.em2],[4,7,8,1,C.em],
+    [1,6,4,4,C.em2],[11,6,4,4,C.em2],[0,7,2,2,C.em],[14,7,2,2,C.em],[6,12,4,3,C.em2],
+    [7,15,2,1,C.go],[5,2,1,2,C.em2],[9,2,1,2,C.em2]],
+  guardian:[[4,2,8,4,C.steel2],[4,2,8,1,C.steel],[5,3,2,2,C.cy],[9,3,2,2,C.cy],[3,6,10,6,C.steel2],
+    [3,6,10,1,C.steel],[2,6,2,5,C.steel2],[12,6,2,5,C.steel2],[1,8,2,2,C.cy],[13,8,2,2,C.cy],
+    [5,7,6,3,C.cy2],[6,8,4,1,C.wt],[4,12,3,3,C.steel2],[9,12,3,3,C.steel2],[7,0,2,2,C.cy]],
+  malachar:[[4,3,8,4,C.pu3],[3,1,10,2,C.gold],[3,0,2,2,C.crown],[7,0,2,2,C.crown],[11,0,2,2,C.crown],
+    [5,4,1,2,C.rd],[10,4,1,2,C.rd],[3,7,10,7,C.pu3],[3,7,10,1,C.pu2],[7,7,2,7,C.pu2],
+    [2,7,2,6,C.pu3],[12,7,2,6,C.pu3],[1,9,2,2,C.rd2],[13,9,2,2,C.rd2],[5,9,6,3,C.pu],
+    [7,10,2,1,C.rd],[4,14,8,1,C.pu2]]
+};
+function drawSpr(name,sx,sy,size,flip){ const rects=SPR[name]; if(!rects) return; const u=size/16;
+  for(const r of rects){ const x=flip?(16-r[0]-r[2]):r[0]; ctx.fillStyle=r[4];
+    ctx.fillRect(Math.round(sx+x*u),Math.round(sy+r[1]*u),Math.ceil(r[2]*u),Math.ceil(r[3]*u)); } }
+function makeSpriteCanvas(name,px){ const rects=SPR[name]||[]; const c=document.createElement('canvas');
+  c.width=16*px; c.height=16*px; const g=c.getContext('2d');
+  for(const r of rects){ g.fillStyle=r[4]; g.fillRect(Math.round(r[0]*px),Math.round(r[1]*px),Math.ceil(r[2]*px),Math.ceil(r[3]*px)); }
+  return c; }
+function h2(x,y){ let n=(x*374761393+y*668265263)>>>0; n=((n^(n>>13))*1274126177)>>>0; return (n>>>0)/4294967295; }
+function drawGround(type,sx,sy,s,hx,hy){
+  const u=s/8; let base;
+  base = type==='grass'?'#3f6b45': type==='sand'?'#cbb987': type==='water'?'#2f6f9e':
+    type==='deep'?'#1d4a70': type==='town'?'#6f6047': type==='stone'?'#4a4560': type==='sky'?'#4f86ad':'#3f6b45';
+  ctx.fillStyle=base; ctx.fillRect(sx,sy,s+1,s+1);
+  if(type==='grass'){ for(let i=0;i<9;i++){ const r=h2(hx*8+i,hy*3+i); let col=null;
+      if(r<0.16)col='#345a3b'; else if(r>0.85)col='#4f7d54'; else continue;
+      const cx=Math.floor(h2(hx+i,hy*7+i)*8), cy=Math.floor(h2(hx*5+i,hy+i*3)*8);
+      ctx.fillStyle=col; ctx.fillRect(Math.round(sx+cx*u),Math.round(sy+cy*u),Math.ceil(u),Math.ceil(u)); } }
+  else if(type==='sand'){ for(let i=0;i<6;i++){ const cx=Math.floor(h2(hx+i,hy*9+i)*8),cy=Math.floor(h2(hx*3+i,hy+i)*8);
+      ctx.fillStyle=h2(cx,cy)>0.5?'#b39a63':'#e2d3a0'; ctx.fillRect(Math.round(sx+cx*u),Math.round(sy+cy*u),Math.ceil(u),Math.ceil(u)); } }
+  else if(type==='water'||type==='deep'){ const light=type==='water'?'#4a8fbe':'#2a5f88';
+      const t=AT*0.9+hx*0.6+hy*0.4;
+      for(let row=1;row<8;row+=3){ const off=Math.floor((Math.sin(t+row)*0.5+0.5)*3);
+        ctx.fillStyle=light;
+        ctx.fillRect(Math.round(sx+off*u),Math.round(sy+row*u),Math.ceil(u*2),Math.max(1,Math.round(u*0.7)));
+        ctx.fillRect(Math.round(sx+(off+4)*u),Math.round(sy+row*u),Math.ceil(u*2),Math.max(1,Math.round(u*0.7))); } }
+  else if(type==='town'){ ctx.fillStyle='#5c4f3a';
+      for(let gx=0;gx<8;gx+=2)for(let gy=0;gy<8;gy+=2){ if((gx+gy)%4===0) ctx.fillRect(Math.round(sx+gx*u),Math.round(sy+gy*u),Math.ceil(u),Math.ceil(u)); } }
+  else if(type==='stone'){ ctx.fillStyle='#38334a';
+      for(let gy=0;gy<8;gy+=3) ctx.fillRect(sx,Math.round(sy+gy*u),s,1);
+      for(let gx=0;gx<8;gx+=3) ctx.fillRect(Math.round(sx+gx*u),sy,1,s); }
+  else if(type==='sky'){ ctx.fillStyle='#6fa6c8';
+      for(let i=0;i<5;i++){ const cx=Math.floor(h2(hx+i,hy+i)*8),cy=Math.floor(h2(hx*2+i,hy*2+i)*8);
+        ctx.fillRect(Math.round(sx+cx*u),Math.round(sy+cy*u),Math.ceil(u),Math.ceil(u)); } }
+}
+function tileLayers(t){
+  switch(t){
+    case '.': return {ground:'grass'};
+    case 'f': return {ground:'grass',obj:'tree'};
+    case 's': return {ground:'sand'};
+    case 'w': return {ground:'water'};
+    case 'd': return {ground:'deep'};
+    case 'M': return {ground:'grass',obj:'mtn'};
+    case '#': return {ground:'stone'};
+    case 'x': return {ground:'grass',obj: S.tools.bomb?'rubble':'boulder'};
+    case 'v': return {ground:'grass',obj:'chasm'};
+    case 'T': return {ground:'town'};
+    case 'K': return {ground:'water',obj:'dock'};
+    case 'V': return {ground:'stone',obj:'vault'};
+    case 'C': return {ground:'grass',obj:'cave'};
+    case '@': return {ground:'sky',obj:'shrine'};
+    case 'Y': return {ground:'grass',obj:'roost'};
+    case 'B': return {ground:'stone',obj:'citadel'};
+    case '*': return {ground:'grass',obj:'chest'};
+    case 'H': return {ground:'town',obj:'house'};
+    default: return {ground:'deep'};
+  }
+}
+
+/* passability */
+function footOK(t){ return '.fsTKCVBH*@Y'.includes(t) || (t===T.CRACK&&S.tools.bomb) || (t===T.CHASM&&S.tools.grapple); }
+function shipOK(t){ return 'wdsK'.includes(t); }
+function flyOK(t){ return t!=='#'; }
+
+/* ============================================================================ */
+let S=null; // game state
+
+function freshState(){
+  return {
+    px:8, py:18, dir:'down', mount:'foot', // foot | ship | wyvern
+    p:{ name:'Rtelian', lv:1, xp:0, hp:60, mp:20, gold:60, sp:0,
+        base:{maxhp:60,maxmp:20,atk:12,def:8,mag:10,res:8,spd:10} },
+    tools:{bomb:false, grapple:false},
+    weapon:'w_rusty', armor:'a_traveler',
+    ownWeapons:['w_rusty'], ownArmor:['a_traveler'],
+    skills:['sk_slash','sk_ember'],      // learned
+    loadout:['sk_slash','sk_ember',null,null], // equipped active skills
+    runes:{},                             // skillId -> [runeId,runeId]
+    ownRunes:[],
+    items:{potion:3, hipotion:0, ether:1, elixir:0},
+    flags:{},                             // story / world flags
+    quest:0,
+    ver:1
+  };
+}
+
+/* ---------- content: quests / objectives ---------- */
+const QUESTS=[
+  "Speak with Elder Vael in Emberhold, then seek the Detonator ARM in the Sunken Crypt to the north.",
+  "You have the Detonator. Blast the sealed rockfall on the eastern road and claim a vessel at the dock.",
+  "Set sail. On the Isle of Gales, recover the Skyhook ARM and breach the Aegis Vault.",
+  "A wyvern nests on a lonely isle to the south. Tame it to reach the skies.",
+  "Fly to the Sky Sanctum. Only the Godsbane relic can end the Sundered King.",
+  "Confront Malachar at the Sundered Citadel. End the shattering — or be shattered."
+];
+
+/* ---------- gear ---------- */
+// mult multiplies the base stat; flat adds after. element for weapons.
+const WEAPONS={
+  w_rusty:   {name:'Rusty Blade', ic:'🗡️', rar:'common', el:'phys', mult:{atk:1.0}, flat:{atk:0}, d:'A chipped heirloom. It has seen better centuries.'},
+  w_ember:   {name:'Ember Fang', ic:'🔥', rar:'rare', el:'fire', mult:{atk:1.7}, flat:{atk:4}, d:'Forged in the Crypt\'s dead forge. Bites with fire.'},
+  w_tempest: {name:'Tempest Edge', ic:'⚡', rar:'epic', el:'bolt', mult:{atk:2.6,spd:1.3}, flat:{atk:10}, d:'The Aegis Vault\'s prize. Storm given an edge.'},
+  w_godsbane:{name:'Godsbane', ic:'🌟', rar:'legend', el:'void', mult:{atk:4.2,mag:1.6}, flat:{atk:24}, barbreak:true, d:'A relic older than the Sundering. It unmakes. Its wielder shears whole life-bars from gods.'}
+};
+const ARMORS={
+  a_traveler:{name:'Traveler\'s Garb', ic:'🧥', rar:'common', mult:{def:1.0}, flat:{maxhp:0}, d:'Sturdy road-cloth.'},
+  a_wardplate:{name:'Wardplate', ic:'🛡️', rar:'rare', mult:{def:1.6,res:1.3}, flat:{maxhp:40}, d:'Rune-etched crypt plate.'},
+  a_aegis:   {name:'Aegis Mantle', ic:'🌀', rar:'epic', mult:{def:2.2,res:1.8,maxmp:1.4}, flat:{maxhp:120,maxmp:20}, d:'The vault\'s guardian wove it from storm-silk.'},
+  a_astral:  {name:'Astral Regalia', ic:'👑', rar:'legend', mult:{def:3.2,res:2.6,maxhp:1.8,maxmp:2.0}, flat:{maxhp:300,maxmp:60}, d:'Sanctum-forged. The heavens\' own aegis.'}
+};
+
+/* ---------- skills ---------- */
+const SKILLS={
+  sk_slash: {name:'Slash', ic:'⚔️', el:'phys', kind:'atk', pow:100, mp:0, hits:1, d:'Basic weapon strike. Free.'},
+  sk_ember: {name:'Ember Bolt', ic:'🔥', el:'fire', kind:'mag', pow:130, mp:4, hits:1, d:'Hurl a mote of fire.'},
+  sk_frost: {name:'Frostlance', ic:'❄️', el:'ice', kind:'mag', pow:150, mp:6, hits:1, d:'Impale with a spear of ice.'},
+  sk_bolt:  {name:'Thunderclap',ic:'⚡', el:'bolt', kind:'mag', pow:165, mp:7, hits:1, d:'Call down a bolt.'},
+  sk_flurry:{name:'Blade Flurry',ic:'�픦', el:'phys', kind:'atk', pow:52, mp:6, hits:3, d:'Three rapid cuts.'},
+  sk_rend:  {name:'Sunder',   ic:'💢', el:'phys', kind:'atk', pow:210, mp:9, pierce:0.5, hits:1, d:'A heavy blow that ignores half of defense.'},
+  sk_void:  {name:'Void Rift',ic:'🌌', el:'void', kind:'mag', pow:260, mp:14, hits:1, d:'Tear a hole in the world.'},
+  sk_heal:  {name:'Mend',     ic:'💚', el:'none', kind:'heal', pow:180, mp:8, d:'Knit your wounds.'},
+  sk_guard: {name:'Bulwark',  ic:'🛡️', el:'none', kind:'buff', mp:5, d:'Halve incoming damage next turn.'},
+  sk_meteor:{name:'Cataclysm',ic:'☄️', el:'fire', kind:'mag', pow:340, mp:22, hits:1, d:'A falling star. Devastation.'}
+};
+// fix a stray char in flurry name
+SKILLS.sk_flurry.ic='🌀';
+
+/* ---------- runes (skill customization) ---------- */
+const RUNES={
+  r_power: {name:'Rune of Force', ic:'⬆️', d:'+50% power', apply:s=>{s.pow=Math.round(s.pow*1.5);}},
+  r_twin:  {name:'Rune of Echo',  ic:'✖️', d:'+1 hit', apply:s=>{s.hits=(s.hits||1)+1;}},
+  r_fire:  {name:'Rune of Cinder',ic:'🔥', d:'element → fire', apply:s=>{s.el='fire';}},
+  r_ice:   {name:'Rune of Rime',  ic:'❄️', d:'element → ice', apply:s=>{s.el='ice';}},
+  r_bolt:  {name:'Rune of Storm', ic:'⚡', d:'element → lightning', apply:s=>{s.el='bolt';}},
+  r_leech: {name:'Rune of Leech', ic:'🩸', d:'heal 30% of damage dealt', apply:s=>{s.leech=0.3;}},
+  r_pierce:{name:'Rune of Fang',  ic:'🗡️', d:'ignore 50% defense', apply:s=>{s.pierce=Math.max(s.pierce||0,0.5);}},
+  r_break: {name:'Rune of Sundering',ic:'💥', d:'+120% damage vs bosses', apply:s=>{s.barbreak=true;}}
+};
+
+/* ---------- enemies ---------- */
+const ENEMY={
+  wolf:  {name:'Duskwolf', ic:'🐺', hp:34, atk:11, def:4, spd:12, xp:8, gold:6, el:'phys', weak:'fire'},
+  bat:   {name:'Nightwing',ic:'🦇', hp:26, atk:9, def:2, spd:16, xp:7, gold:5, el:'void', weak:'bolt'},
+  scorp: {name:'Sand Reaver',ic:'🦂', hp:48, atk:15, def:8, spd:9, xp:12, gold:10, el:'phys', weak:'ice'},
+  golem: {name:'Ruin Golem',ic:'🗿', hp:120, atk:22, def:20, spd:5, xp:26, gold:22, el:'phys', weak:'bolt'},
+  wraith:{name:'Sea Wraith',ic:'👻', hp:90, atk:24, def:10, spd:14, xp:24, gold:18, el:'void', weak:'fire'},
+  drake: {name:'Ash Drake', ic:'🐲', hp:160, atk:30, def:16, spd:13, xp:40, gold:35, el:'fire', weak:'ice'},
+  // bosses
+  guardian:{name:'Tempest Guardian',ic:'🌩️', hp:520, bars:3, atk:34, def:22, spd:15, xp:120, gold:120, el:'bolt', weak:'ice', boss:true},
+  wyvernboss:{name:'Wild Wyvern',ic:'🐉', hp:420, bars:3, atk:32, def:18, spd:20, xp:110, gold:90, el:'phys', weak:'bolt', boss:true, tame:true},
+  malachar:{name:'Malachar, the Sundered King',ic:'👑', hp:2400, bars:6, atk:52, def:34, res:30, spd:18, xp:999, gold:999, el:'void', weak:'none', boss:true, phase:true}
+};
+const ELEMS=['fire','ice','bolt','void','phys','none'];
+
+/* ============================================================================
+   WORLD GENERATION (deterministic stamping — guarantees playable gates)
+   ============================================================================ */
+function buildWorld(){
+  MAP=[];
+  for(let y=0;y<WORLD_H;y++){ MAP.push(new Array(WORLD_W).fill(T.DEEP)); }
+  // continent (solid land => guaranteed foot-connectivity)
+  for(let y=3;y<=28;y++) for(let x=2;x<=23;x++){
+    let edge = (x<=3||x>=22||y<=4||y>=27);
+    MAP[y][x]= edge? T.GRASS : T.GRASS;
+  }
+  // mountain frame + spine
+  for(let x=1;x<=24;x++){ if(MAP[2]) MAP[2][x]=T.MTN; if(MAP[29]) MAP[29][x]=T.MTN; }
+  for(let y=2;y<=29;y++){ MAP[y][1]=T.MTN; }
+  // forest patches (deterministic pseudo-scatter)
+  for(let y=4;y<=27;y++) for(let x=3;x<=22;x++){
+    let h=((x*7+y*13+x*y*3)%17);
+    if(h<4 && MAP[y][x]===T.GRASS) MAP[y][x]=T.FOREST;
+  }
+  // a few interior mountains for texture (kept off key paths)
+  [[5,5],[6,5],[19,7],[20,7],[4,24],[5,24],[18,25],[19,25]].forEach(([x,y])=>{ if(MAP[y]&&MAP[y][x]) MAP[y][x]=T.MTN; });
+
+  // --- Emberhold town (walkable) ---
+  for(let y=16;y<=20;y++) for(let x=6;x<=11;x++) MAP[y][x]=T.TOWN;
+  MAP[16][7]=T.HOUSE; MAP[16][10]=T.HOUSE; MAP[20][8]=T.HOUSE;
+  // start on town
+  S.px=8; S.py=18;
+
+  // --- Sunken Crypt entrance (free tool #1) ---
+  MAP[6][15]=T.CAVE;
+
+  // --- Eastern barrier + cracked wall gate + dock peninsula ---
+  for(let y=8;y<=22;y++) MAP[y][24]=T.MTN;   // wall between mainland and coast
+  MAP[15][24]=T.CRACK;                        // the only gap (needs bomb)
+  MAP[15][25]=T.SAND; MAP[15][26]=T.SAND;     // peninsula
+  MAP[14][25]=T.SAND; MAP[16][25]=T.SAND;
+  MAP[15][26]=T.DOCK;                         // board ship here
+  // ensure water east of dock
+  for(let y=3;y<=29;y++) for(let x=27;x<=47;x++) MAP[y][x]= (x>34? T.DEEP : ((x+y)%5===0? T.DEEP : T.WATER));
+  // clear a calm bay near dock
+  for(let y=13;y<=17;y++) for(let x=27;x<=31;x++) MAP[y][x]=T.WATER;
+
+  // --- Isle of Gales (ship -> mini-boss -> grapple -> vault) ---
+  islandBlob(35,9,3);
+  MAP[9][35]=T.SAND;             // landing
+  MAP[9][34]=T.GRASS; MAP[8][35]=T.GRASS; MAP[10][35]=T.FOREST;
+  MAP[9][36]=T.CHASM;            // grapple gate
+  MAP[9][37]=T.VAULT;            // Aegis Vault (opens after guardian gives sigil? -> here: after grapple)
+  // guardian trigger sits on landing tile via flag; we place a marker chest-like tile
+  MAP[8][34]=T.GRASS;
+
+  // --- Wyvern roost isle (ship -> tame wyvern) ---
+  islandBlob(39,24,3);
+  MAP[24][39]=T.SAND;
+  MAP[24][38]=T.GRASS; MAP[23][39]=T.FOREST; MAP[25][39]=T.GRASS;
+  MAP[24][40]=T.ROOST;
+
+  // --- Sky Sanctum (wyvern only; a floating peak ringed by impassable crags) ---
+  for(let y=2;y<=7;y++) for(let x=38;x<=44;x++){ if(MAP[y]) MAP[y][x]=T.MTN; }
+  MAP[4][41]=T.GRASS; MAP[4][40]=T.GRASS; MAP[5][41]=T.GRASS; MAP[4][42]=T.GRASS; MAP[3][41]=T.GRASS;
+  MAP[4][41]=T.SHRINE; // Godsbane
+
+  // --- Sundered Citadel (final; far SE isle) ---
+  islandBlob(44,27,2);
+  MAP[27][44]=T.SAND; MAP[27][43]=T.GRASS; MAP[26][44]=T.GRASS;
+  MAP[27][45]=T.CITADEL;
+
+  // --- treasure chests scattered ---
+  [[4,10],[21,22],[13,26],[17,10]].forEach(([x,y])=>{ if(MAP[y]&&'.f'.includes(MAP[y][x])) MAP[y][x]=T.CHEST; });
+}
+function islandBlob(cx,cy,r){
+  for(let y=cy-r;y<=cy+r;y++) for(let x=cx-r;x<=cx+r;x++){
+    if(y<0||y>=WORLD_H||x<0||x>=WORLD_W) continue;
+    let dist=Math.abs(x-cx)+Math.abs(y-cy);
+    if(dist<=r) MAP[y][x]=T.GRASS;
+    else if(dist===r+0) MAP[y][x]=T.SAND;
+  }
+  // sand ring
+  for(let y=cy-r-1;y<=cy+r+1;y++) for(let x=cx-r-1;x<=cx+r+1;x++){
+    if(y<0||y>=WORLD_H||x<0||x>=WORLD_W) continue;
+    if(MAP[y][x]===T.DEEP||MAP[y][x]===T.WATER){
+      let near=false;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){let ny=y+dy,nx=x+dx;if(MAP[ny]&&'.f'.includes(MAP[ny][nx]))near=true;}
+      if(near) MAP[y][x]=T.SAND;
+    }
+  }
+}
+
+/* ============================================================================
+   DERIVED STATS  (gear multipliers => big, rewarding power spikes)
+   ============================================================================ */
+function stats(){
+  const b=S.p.base, w=WEAPONS[S.weapon], a=ARMORS[S.armor];
+  const m={maxhp:1,maxmp:1,atk:1,def:1,mag:1,res:1,spd:1};
+  const f={maxhp:0,maxmp:0,atk:0,def:0,mag:0,res:0,spd:0};
+  [w.mult,a.mult].forEach(o=>{for(const k in o) m[k]=(m[k]||1)*o[k];});
+  [w.flat,a.flat].forEach(o=>{for(const k in o) f[k]=(f[k]||0)+o[k];});
+  const out={};
+  for(const k in b) out[k]=Math.round(b[k]*(m[k]||1)+(f[k]||0));
+  out.el=w.el; out.barbreak=!!w.barbreak;
+  return out;
+}
+function xpNext(lv){ return Math.round(24*Math.pow(lv,1.55)); }
+
+/* ============================================================================
+   RENDER — OVERWORLD
+   ============================================================================ */
+let TILE=40, VW=11, VH=13;
+function resize(){
+  const st=document.getElementById('stage');
+  cv.width=st.clientWidth; cv.height=st.clientHeight;
+  TILE=Math.floor(cv.width/11);
+  VW=Math.ceil(cv.width/TILE)+2; VH=Math.ceil(cv.height/TILE)+2;
+}
+window.addEventListener('resize',()=>{resize();});
+function shadow(sx,sy){ ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath();
+  ctx.ellipse(sx+TILE/2,sy+TILE*0.86,TILE*0.26,TILE*0.1,0,0,7); ctx.fill(); }
+function drawWorld(){
+  AT=performance.now()/1000;
+  ctx.fillStyle='#07050f'; ctx.fillRect(0,0,cv.width,cv.height);
+  const camX=S.px - Math.floor(VW/2), camY=S.py - Math.floor(VH/2);
+  const ox=cv.width/2 - TILE/2, oy=cv.height/2 - TILE/2;
+  // ground pass
+  for(let vy=0;vy<VH;vy++) for(let vx=0;vx<VW;vx++){
+    const mx=camX+vx, my=camY+vy;
+    const sx=ox+(mx-S.px)*TILE, sy=oy+(my-S.py)*TILE;
+    const t=(my>=0&&my<WORLD_H&&mx>=0&&mx<WORLD_W)?MAP[my][mx]:'d';
+    drawGround(tileLayers(t).ground, sx, sy, TILE, mx, my);
+  }
+  // object pass (row-ordered so taller sprites overlap correctly)
+  for(let vy=0;vy<VH;vy++) for(let vx=0;vx<VW;vx++){
+    const mx=camX+vx, my=camY+vy;
+    const sx=ox+(mx-S.px)*TILE, sy=oy+(my-S.py)*TILE;
+    const t=(my>=0&&my<WORLD_H&&mx>=0&&mx<WORLD_W)?MAP[my][mx]:'d';
+    const L=tileLayers(t); if(L.obj) drawSpr(L.obj, sx, sy, TILE);
+  }
+  // NPCs
+  NPCS.forEach(n=>{ const sx=ox+(n.x-S.px)*TILE, sy=oy+(n.y-S.py)*TILE;
+    shadow(sx,sy); drawSpr(n.spr||'npc', sx, sy, TILE); });
+  // player / mount (subtle idle bob + facing flip)
+  const bob=Math.sin(AT*4)*(TILE*0.03);
+  shadow(ox,oy);
+  const name = S.mount==='ship'?'ship' : S.mount==='wyvern'?'wyvern' : 'hero';
+  drawSpr(name, ox, oy+bob, TILE, S.dir==='left');
+}
+
+/* NPCs (metadata) */
+const NPCS=[
+  {x:9,y:17,ic:'🧙',id:'elder'},
+  {x:7,y:19,ic:'⚖️',id:'merchant'},
+  {x:11,y:19,ic:'📜',id:'scholar'}
+];
+
+/* ============================================================================
+   MOVEMENT + INTERACTION
+   ============================================================================ */
+let moveCd=0;
+function tryMove(dx,dy){
+  S.dir = dx<0?'left':dx>0?'right':dy<0?'up':'down';
+  const nx=S.px+dx, ny=S.py+dy;
+  if(nx<0||ny<0||nx>=WORLD_W||ny>=WORLD_H) return;
+  const t=MAP[ny][nx];
+  // mount-specific passability
+  let ok=false;
+  if(S.mount==='foot')  ok=footOK(t);
+  if(S.mount==='ship')  ok=shipOK(t);
+  if(S.mount==='wyvern')ok=flyOK(t);
+  // auto-cross chasm on foot with grapple (leap two tiles)
+  if(S.mount==='foot' && t===T.CHASM && S.tools.grapple){
+    const jx=nx+dx, jy=ny+dy;
+    if(jx>=0&&jy>=0&&jx<WORLD_W&&jy<WORLD_H && footOK(MAP[jy][jx])){ S.px=jx; S.py=jy; toast('Skyhook! You swing across the chasm.'); afterStep(); return; }
+  }
+  if(!ok){
+    // helpful nudges
+    if(S.mount==='foot'){
+      if(t===T.WATER||t===T.DEEP) toast('Deep water. You need a vessel.');
+      else if(t===T.CRACK) toast('A sealed rockfall. Something could blast it.');
+      else if(t===T.CHASM) toast('A yawning chasm. You need a way across.');
+      else if(t===T.MTN) toast('The peaks are impassable on foot.');
+    }
+    return;
+  }
+  S.px=nx; S.py=ny; afterStep();
+}
+function afterStep(){
+  const t=MAP[S.py][S.px];
+  updateActBtn();
+  // arriving on POI hints handled by USE; random encounters:
+  if(S.mount!=='wyvern'){
+    if((t===T.GRASS||t===T.FOREST||t===T.SAND) ){
+      const chance = t===T.FOREST?0.16 : t===T.SAND?0.12 : 0.09;
+      if(Math.random()<chance) startEncounter();
+    }
+    if(t===T.WATER||t===T.DEEP){ if(Math.random()<0.08) startEncounter(); }
+  }
+  syncHud();
+}
+
+/* contextual USE button */
+function contextAt(){
+  const t=MAP[S.py][S.px];
+  // adjacent tile in facing dir
+  const d={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]}[S.dir];
+  const fx=S.px+d[0], fy=S.py+d[1];
+  const ft=(fy>=0&&fy<WORLD_H&&fx>=0&&fx<WORLD_W)?MAP[fy][fx]:T.DEEP;
+  // NPC in front
+  const npc=NPCS.find(n=>n.x===fx&&n.y===fy);
+  if(npc) return {type:'talk',npc};
+  if(ft===T.CRACK && S.tools.bomb) return {type:'bomb',x:fx,y:fy};
+  // standing on POI
+  if(t===T.DOCK) return {type:'dock'};
+  if(t===T.CAVE) return {type:'cave'};
+  if(t===T.VAULT) return {type:'vault'};
+  if(t===T.SHRINE) return {type:'shrine'};
+  if(t===T.ROOST && !S.flags.wyvern) return {type:'roost'};
+  if(t===T.CITADEL) return {type:'citadel'};
+  if(t===T.CHEST) return {type:'chest',x:S.px,y:S.py};
+  // isle-of-gales guardian: standing on landing before beating it
+  if(S.px===35&&S.py===9 && !S.flags.guardian) return {type:'guardian'};
+  if(S.mount==='ship') return {type:'disembark'};
+  if(S.mount==='wyvern') return {type:'land'};
+  if(S.flags.wyvern && S.mount==='foot') return {type:'fly'};
+  return {type:'none'};
+}
+function updateActBtn(){
+  const c=contextAt();
+  const lbl={talk:'Talk',bomb:'Blast',dock:'Sail',cave:'Enter',vault:'Open',shrine:'Pray',
+    roost:'Approach',citadel:'Enter',chest:'Open',guardian:'Fight',disembark:'Land',
+    fly:'Fly',land:'Land',none:'—'}[c.type];
+  $('aActLbl').textContent=lbl;
+}
+function doAction(){
+  const c=contextAt();
+  switch(c.type){
+    case 'talk': talk(c.npc.id); break;
+    case 'bomb': MAP[c.y][c.x]=T.SAND; toast('💥 The Detonator roars! The rockfall shatters.'); updateActBtn(); break;
+    case 'dock':
+      if(!S.flags.ship){ S.flags.ship=true; }
+      if(S.mount==='ship'){ S.mount='foot'; toast('You step onto the dock.'); }
+      else { S.mount='ship'; toast('⛵ You cast off. The open sea awaits.'); if(S.quest<3) setQuest(2); }
+      break;
+    case 'disembark': {
+      // land onto adjacent sand/grass
+      const dirs=[[0,-1],[0,1],[-1,0],[1,0]];
+      let landed=false;
+      for(const[dx,dy]of dirs){const nx=S.px+dx,ny=S.py+dy;if(MAP[ny]&&footOK(MAP[ny][nx])&&'.fs'.includes(MAP[ny][nx])){S.px=nx;S.py=ny;S.mount='foot';landed=true;toast('You come ashore.');break;}}
+      if(!landed) toast('No shore to land on here.');
+      break; }
+    case 'fly': S.mount='wyvern'; toast('🐉 You take to the skies. Nothing bars your flight.'); break;
+    case 'land': {
+      const walk='.fsTKCVBH*@Y';
+      if(walk.includes(MAP[S.py][S.px])){ S.mount='foot'; toast('You alight gently.'); }
+      else { const dirs=[[0,-1],[0,1],[-1,0],[1,0]]; let done=false;
+        for(const[dx,dy]of dirs){const nx=S.px+dx,ny=S.py+dy; if(MAP[ny]&&walk.includes(MAP[ny][nx])){S.px=nx;S.py=ny;S.mount='foot';done=true;toast('You alight nearby.');break;}}
+        if(!done) toast('Nowhere safe to land here — fly to solid ground.'); }
+      break; }
+    case 'cave': enterCrypt(); break;
+    case 'guardian': bossBattle('guardian'); break;
+    case 'vault': openAegisVault(); break;
+    case 'roost': roostEvent(); break;
+    case 'shrine': skyShrine(); break;
+    case 'citadel': citadelEvent(); break;
+    case 'chest': openChest(c.x,c.y); break;
+    default: toast('Nothing to do here.');
+  }
+  syncHud();
+}
+
+/* ---------- events ---------- */
+function enterCrypt(){
+  if(S.flags.crypt){ loot('🕳️','The Sunken Crypt','Silent now. You have already taken what it kept.', ()=>{}); return; }
+  // small gauntlet then reward
+  dialogue('Sunken Crypt',"Cold breath rises from the dark. Machine-lanterns flicker to life — and something stirs.",()=>{
+    S.flags.pendingLoot='crypt';
+    startFixed(['bat','bat','golem']); // last is tougher
+  });
+}
+function afterCrypt(){
+  S.flags.crypt=true;
+  gainWeapon('w_ember'); gainArmor('a_wardplate');
+  S.tools.bomb=true; learn('sk_frost');
+  loot('🔥','ARM Recovered: Detonator',
+    "Deep in the forge you find the <b>Detonator ARM</b> — ancient blast-tech that shatters sealed stone. You also claim the <b>Ember Fang</b> blade, <b>Wardplate</b>, and learn <b>Frostlance</b>.<br><br>Now the eastern rockfall can be broken.",
+    ()=>{ setQuest(1); });
+}
+function openAegisVault(){
+  if(!S.tools.grapple){ toast('A chasm blocks the vault. You need the Skyhook.'); return; }
+  if(S.flags.aegis){ toast('The vault is empty.'); return; }
+  S.flags.aegis=true;
+  gainWeapon('w_tempest'); gainArmor('a_aegis'); gainRune('r_pierce'); gainRune('r_twin');
+  loot('🌀','Aegis Vault Breached',
+    "Storm-light spills out. You claim the <b>Tempest Edge</b> and the <b>Aegis Mantle</b> — your power surges. Two runes rest within: <b>Rune of Fang</b> and <b>Rune of Echo</b>.<br><br>Socket runes into your skills from the Skills menu to craft your own techniques.",
+    ()=>{ setQuest(3); });
+}
+function roostEvent(){
+  if(S.mount==='wyvern'||S.flags.wyvern){ toast('The roost is empty — your wyvern answers to you now.'); return; }
+  dialogue('Roost',"A great wyvern uncoils from the crags, wings blotting the sun. It will not be tamed — only bested.",()=>{
+    S.flags.pendingLoot='wyvern';
+    bossBattle('wyvernboss');
+  });
+}
+function afterWyvern(){
+  S.flags.wyvern=true; gainRune('r_break');
+  loot('🐉','Wyvern Tamed',
+    "The beast lowers its head. It is yours. Press <b>USE</b> here anytime to mount and take to the skies — nothing on the map can stop your flight.<br><br>You also tear the <b>Rune of Sundering</b> from its hoard (+120% damage vs bosses).",
+    ()=>{ setQuest(4); });
+}
+function skyShrine(){
+  if(S.flags.godsbane){ toast('The altar is bare.'); return; }
+  S.flags.godsbane=true; gainWeapon('w_godsbane'); gainArmor('a_astral'); learn('sk_meteor'); learn('sk_void'); gainRune('r_break'); gainRune('r_power');
+  loot('🌟','The Godsbane',
+    "At the world\'s roof you lift the <b>Godsbane</b> — a relic that shears whole life-bars from the divine. The <b>Astral Regalia</b> settles on your shoulders. You learn <b>Cataclysm</b> and <b>Void Rift</b>, and gain the <b>Rune of Sundering</b> and <b>Rune of Force</b>.<br><br>Equip the Godsbane, build a skill, and end the Sundered King.",
+    ()=>{ setQuest(5); });
+}
+function citadelEvent(){
+  dialogue('Sundered Citadel',
+    "Upon a throne of broken sky sits Malachar, the Sundered King — he who shattered the realm to remake it in silence. He rises. There will be no words that matter now.",
+    ()=>{ bossBattle('malachar'); });
+}
+function openChest(x,y){
+  MAP[y][x]=T.GRASS;
+  const rolls=[['potion',2],['ether',1],['gold',40],['hipotion',1]];
+  const r=rolls[(x+y)%rolls.length];
+  if(r[0]==='gold'){ S.p.gold+=r[1]; toast('◈ Found '+r[1]+' gold.'); }
+  else { S.items[r[0]]=(S.items[r[0]]||0)+r[1]; toast('Found '+r[1]+' × '+itemName(r[0])+'.'); }
+  updateActBtn();
+}
+
+/* ---------- gains ---------- */
+function gainWeapon(id){ if(!S.ownWeapons.includes(id)) S.ownWeapons.push(id); }
+function gainArmor(id){ if(!S.ownArmor.includes(id)) S.ownArmor.push(id); }
+function gainRune(id){ S.ownRunes.push(id); }
+function learn(id){ if(!S.skills.includes(id)) S.skills.push(id); }
+
+/* ============================================================================
+   DIALOGUE
+   ============================================================================ */
+let dq=[], dcb=null;
+function dialogue(speaker,text,cb){
+  dq=[[speaker,text]]; dcb=cb||null; showDialogue();
+}
+function dialogueSeq(pairs,cb){ dq=pairs.slice(); dcb=cb||null; showDialogue(); }
+function showDialogue(){
+  if(!dq.length){ $('dialogue').style.display='none'; const c=dcb; dcb=null; if(c)c(); return; }
+  const [sp,tx]=dq[0];
+  $('dspeaker').textContent=sp; $('dtext').innerHTML=tx; $('dialogue').style.display='block';
+}
+$('dialogue').addEventListener('click',()=>{ dq.shift(); showDialogue(); });
+
+function talk(id){
+  if(id==='elder'){
+    dialogueSeq([
+      ['Elder Vael',"You feel it too, don\'t you, Rtelian. The world thins at the edges. The sky bleeds where it once was whole."],
+      ['Elder Vael',"Long ago the King Malachar wielded the ancient ARMs to <i>sunder</i> creation — believing a broken world easier to rule than a living one."],
+      ['Elder Vael',"You carry the old blood. Only one Aetherborne can gather the ARMs, cross the sundered seas, and reach him."],
+      ['Elder Vael',"Begin at the Sunken Crypt, north through the wood. The first ARM sleeps there. Go — and mind the dark."]
+    ],()=>{ if(S.quest<1) setQuest(0); });
+  } else if(id==='scholar'){
+    dialogueSeq([
+      ['Scholar Oin',"The ARMs are tools first, weapons second. The Detonator breaks sealed stone. The Skyhook crosses the uncrossable."],
+      ['Scholar Oin',"And skills, friend — a technique is only raw shape. Socket <b>runes</b> into it and you forge something wholly your own. Add hits, change its element, drink the enemy\'s blood."],
+      ['Scholar Oin',"They say a relic named Godsbane sleeps above the clouds. With it, they say, a single stroke can carve a life-bar clean from a god."]
+    ]);
+  } else if(id==='merchant'){
+    openShop();
+  }
+}
+
+/* ============================================================================
+   SHOP
+   ============================================================================ */
+const SHOP=[
+  {id:'potion',price:20},{id:'hipotion',price:70},{id:'ether',price:40},{id:'elixir',price:160}
+];
+function itemName(id){return{potion:'Potion',hipotion:'Hi-Potion',ether:'Ether',elixir:'Elixir'}[id]||id;}
+function itemDesc(id){return{potion:'Restore 70 HP',hipotion:'Restore 320 HP',ether:'Restore 24 MP',elixir:'Full HP & MP'}[id];}
+function openShop(){
+  const b=$('shopbody'); b.innerHTML='<div class="hint">Gold: ◈ '+S.p.gold+'</div>';
+  SHOP.forEach(s=>{
+    const d=document.createElement('div'); d.className='card';
+    d.innerHTML=`<div class="shopitem"><div><h4 style="margin:0">${itemName(s.id)} <span style="color:var(--brass)">◈${s.price}</span></h4>
+      <div class="d">${itemDesc(s.id)} · have: ${S.items[s.id]||0}</div></div></div>`;
+    const btn=document.createElement('button'); btn.className='btn gold'; btn.textContent='Buy';
+    btn.onclick=()=>{ if(S.p.gold>=s.price){ S.p.gold-=s.price; S.items[s.id]=(S.items[s.id]||0)+1; openShop(); syncHud(); } else toast('Not enough gold.'); };
+    d.querySelector('.shopitem').appendChild(btn); b.appendChild(d);
+  });
+  screen('shop');
+}
+$('shopclose').onclick=()=>{ closeScreens(); };
+
+/* ============================================================================
+   BATTLE SYSTEM
+   ============================================================================ */
+let B=null;
+function tierAt(){
+  // danger tier by region
+  if(S.px>=32) return (S.py<=8?4: 3);       // isles / sanctum
+  if(S.px>=24) return 2;                     // peninsula/coast
+  return 1;                                  // mainland
+}
+function randPack(tier){
+  const pools={1:['wolf','bat','wolf'],2:['scorp','wolf','wraith'],3:['wraith','scorp','golem'],4:['drake','wraith','drake']};
+  const pool=pools[tier]||pools[1];
+  const n = tier>=3? (Math.random()<0.5?2:3) : (Math.random()<0.6?1:2);
+  const arr=[]; for(let i=0;i<n;i++) arr.push(pool[Math.floor(Math.random()*pool.length)]);
+  return arr;
+}
+function startEncounter(){ startFixed(randPack(tierAt())); }
+function startFixed(ids){
+  const tier=tierAt();
+  B={ enemies: ids.map(id=>mkEnemy(id,tier)), boss:false, turn:'player', guard:false, over:false };
+  buildBattleUI();
+  screen('battle');
+  log('Ambush! '+B.enemies.map(e=>e.name).join(', ')+' appear.');
+}
+function bossBattle(id){
+  B={ enemies:[mkEnemy(id,1,true)], boss:true, turn:'player', guard:false, over:false, phased:false };
+  buildBattleUI(); screen('battle');
+  log('⚔ '+B.enemies[0].name+' stands before you.');
+}
+function mkEnemy(id,tier,isBoss){
+  const d=ENEMY[id]; const scale= isBoss?1 : (1+(tier-1)*0.35);
+  const hp=Math.round(d.hp*scale);
+  return {id,name:d.name,ic:d.ic,hp,maxhp:hp,atk:Math.round(d.atk*scale),def:Math.round(d.def*scale),
+    res:d.res||d.def, spd:d.spd, xp:d.xp,gold:d.gold,el:d.el,weak:d.weak,
+    bars:d.bars||0, boss:!!d.boss, tame:d.tame, phase:d.phase, alive:true };
+}
+function buildBattleUI(){
+  const z=$('enemyzone');
+  // clear enemies but keep floaters + barbreak nodes
+  [...z.querySelectorAll('.enemy')].forEach(n=>n.remove());
+  B.enemies.forEach((e,i)=>{
+    const el=document.createElement('div'); el.className='enemy'; el.dataset.i=i;
+    let bar;
+    if(e.bars>1){
+      bar='<div class="segbar" id="seg'+i+'">'+Array.from({length:e.bars}).map(()=>'<div class="seg"></div>').join('')+'</div>';
+    } else {
+      bar='<div class="ebar"><i id="eb'+i+'"></i></div>';
+    }
+    el.innerHTML=`<div class="spr"></div><div class="name">${e.name}</div>${bar}`;
+    const spname = e.id==='wyvernboss'?'wyvern':e.id;
+    const cvs=makeSpriteCanvas(spname, e.boss?7:5);
+    const dim=e.boss?108:78; cvs.style.width=dim+'px'; cvs.style.height=dim+'px';
+    el.querySelector('.spr').appendChild(cvs);
+    el.onclick=()=>{ B.target=i; markTarget(); };
+    z.appendChild(el);
+  });
+  const hs=$('herospr'); if(hs){ hs.innerHTML=''; const hc=makeSpriteCanvas('hero',5);
+    hc.style.width='72px'; hc.style.height='72px'; hs.appendChild(hc); }
+  B.target=0; markTarget(); refreshEnemyBars(); syncBattleHero();
+  showBMenu();
+}
+function markTarget(){ [...document.querySelectorAll('.enemy')].forEach((n,i)=>n.classList.toggle('target', i===B.target && B.enemies[i].alive)); }
+function refreshEnemyBars(){
+  B.enemies.forEach((e,i)=>{
+    if(e.bars>1){
+      const seg=$('seg'+i); if(!seg)return;
+      const per=e.maxhp/e.bars; const full=Math.ceil(e.hp/per);
+      [...seg.children].forEach((c,idx)=>c.classList.toggle('empty', idx>=full));
+    } else { const b=$('eb'+i); if(b) b.style.width=Math.max(0,e.hp/e.maxhp*100)+'%'; }
+  });
+}
+function syncBattleHero(){
+  const st=stats();
+  $('bHp').style.width=Math.max(0,S.p.hp/st.maxhp*100)+'%';
+  $('bMp').style.width=Math.max(0,S.p.mp/st.maxmp*100)+'%';
+  $('bHpN').textContent=S.p.hp+'/'+st.maxhp;
+  $('bMpN').textContent=S.p.mp+'/'+st.maxmp;
+}
+function log(t){ $('battlelog').textContent=t; }
+
+/* battle menu */
+function showBMenu(){ $('bmenu').style.display='grid'; $('bsub').style.display='none'; }
+function showSub(html){ $('bsub').innerHTML=html; $('bmenu').style.display='none'; $('bsub').style.display='grid'; }
+document.querySelectorAll('#bmenu .btn').forEach(b=>{
+  b.onclick=()=>{ if(B.turn!=='player'||B.over) return;
+    const a=b.dataset.b;
+    if(a==='attack') playerAttack('sk_slash');
+    else if(a==='skill') openSkillSub();
+    else if(a==='item') openItemSub();
+    else if(a==='flee') doFlee();
+  };
+});
+function openSkillSub(){
+  let h='';
+  S.loadout.forEach(id=>{ if(!id) return; const s=composed(id);
+    h+=`<button class="btn" data-sk="${id}"><span>${s.ic} ${s.name}</span><span class="cost">${s.mp} MP</span></button>`; });
+  if(!h) h='<div class="hint">No skills equipped. Equip skills from the Skills menu.</div>';
+  h+='<button class="btn backb" data-back="1">◀ Back</button>';
+  showSub(h);
+  $('bsub').querySelectorAll('[data-sk]').forEach(b=>b.onclick=()=>{ const id=b.dataset.sk; const s=composed(id);
+    if(S.p.mp<s.mp){ toast('Not enough MP.'); return; }
+    if(s.kind==='heal'||s.kind==='buff') playerSupport(id); else playerAttack(id); });
+  $('bsub').querySelector('[data-back]').onclick=showBMenu;
+}
+function openItemSub(){
+  let h='';
+  ['potion','hipotion','ether','elixir'].forEach(id=>{ const n=S.items[id]||0; if(!n) return;
+    h+=`<button class="btn" data-it="${id}"><span>${itemName(id)}</span><span class="cost">×${n}</span></button>`; });
+  if(!h) h='<div class="hint">No items.</div>';
+  h+='<button class="btn backb" data-back="1">◀ Back</button>';
+  showSub(h);
+  $('bsub').querySelectorAll('[data-it]').forEach(b=>b.onclick=()=>useItem(b.dataset.it,true));
+  $('bsub').querySelector('[data-back]').onclick=showBMenu;
+}
+
+/* compose a skill with its runes */
+function composed(id){
+  const base=SKILLS[id]; const s=Object.assign({},base);
+  s.pow=base.pow||0; s.hits=base.hits||1; s.el=base.el;
+  (S.runes[id]||[]).forEach(rid=>{ if(rid&&RUNES[rid]) RUNES[rid].apply(s); });
+  return s;
+}
+function elemMult(el,enemy){
+  if(el==='none'||!el) return 1;
+  if(enemy.weak===el) return 1.75;
+  if(enemy.el===el) return 0.7;
+  return 1;
+}
+function calcDamage(skill, enemy){
+  const st=stats();
+  const useMag = skill.kind==='mag';
+  let power = useMag? st.mag : st.atk;
+  // weapon element applies to physical weapon skills; skill element to magic
+  const el = useMag? skill.el : (skill.el==='phys'? st.el : skill.el);
+  let base = power * (skill.pow/100);
+  // defense
+  const pierce = skill.pierce||0;
+  const defStat = useMag? enemy.res : enemy.def;
+  base -= defStat*(1-pierce)*0.9;
+  base = Math.max(2, base);
+  base *= elemMult(el, enemy);
+  // boss-breaker bonuses
+  if((skill.barbreak||st.barbreak) && enemy.boss) base*=2.2;
+  // crit
+  let crit=1; if(Math.random()<0.12){ crit=1.6; }
+  base*=crit;
+  // variance
+  base*= (0.9+Math.random()*0.2);
+  return {dmg:Math.round(base), el, crit:crit>1, leech:skill.leech||0};
+}
+function playerAttack(id){
+  if(B.turn!=='player'||B.over) return;
+  const s=composed(id);
+  if(S.p.mp<(s.mp||0)){ toast('Not enough MP.'); return; }
+  S.p.mp-=(s.mp||0);
+  let tgt=B.enemies[B.target]; if(!tgt||!tgt.alive){ tgt=B.enemies.find(e=>e.alive); B.target=B.enemies.indexOf(tgt); }
+  if(!tgt) return;
+  showBMenu(); B.turn='anim';
+  const hits=s.hits||1; let seq=Promise.resolve(); let totalLeech=0;
+  for(let h=0;h<hits;h++){
+    seq=seq.then(()=>new Promise(res=>{
+      if(!tgt.alive){ // retarget mid-flurry
+        tgt=B.enemies.find(e=>e.alive); if(!tgt){res();return;} B.target=B.enemies.indexOf(tgt); markTarget();
+      }
+      const r=calcDamage(s,tgt);
+      const preBars = tgt.bars>1? Math.ceil(tgt.hp/(tgt.maxhp/tgt.bars)):0;
+      tgt.hp-=r.dmg; totalLeech+=Math.round(r.dmg*r.leech);
+      floatDmg(B.target, r.dmg, r.el, r.crit);
+      hurt(B.target);
+      refreshEnemyBars();
+      // bar break check
+      if(tgt.bars>1){ const postBars=Math.max(0,Math.ceil(tgt.hp/(tgt.maxhp/tgt.bars)));
+        if(postBars<preBars-0.0001 && tgt.hp>0){ barBreak(); } }
+      log((s.name)+(hits>1?(' ('+(h+1)+'/'+hits+')'):'')+' hits '+tgt.name+' for '+r.dmg+'.');
+      if(tgt.hp<=0){ tgt.hp=0; tgt.alive=false; killEnemy(B.target); }
+      setTimeout(res,300);
+    }));
+  }
+  seq.then(()=>{
+    if(totalLeech>0){ const st=stats(); S.p.hp=Math.min(st.maxhp,S.p.hp+totalLeech); floatHeal(totalLeech); syncBattleHero(); log('You drain '+totalLeech+' HP.'); }
+    checkPhase();
+    endPlayerTurn();
+  });
+}
+function playerSupport(id){
+  const s=composed(id); if(S.p.mp<s.mp){toast('Not enough MP.');return;}
+  S.p.mp-=s.mp; showBMenu(); B.turn='anim';
+  const st=stats();
+  if(s.kind==='heal'){ const amt=Math.round(st.mag*(s.pow/100)+40); S.p.hp=Math.min(st.maxhp,S.p.hp+amt); floatHeal(amt); log('You mend '+amt+' HP.'); }
+  if(s.kind==='buff'){ B.guard=true; log('You raise a bulwark.'); }
+  syncBattleHero(); setTimeout(endPlayerTurn,350);
+}
+function useItem(id,inBattle){
+  if((S.items[id]||0)<=0) return; S.items[id]--;
+  const st=stats();
+  if(id==='potion'){ S.p.hp=Math.min(st.maxhp,S.p.hp+70); if(inBattle)floatHeal(70); }
+  if(id==='hipotion'){ S.p.hp=Math.min(st.maxhp,S.p.hp+320); if(inBattle)floatHeal(320); }
+  if(id==='ether'){ S.p.mp=Math.min(st.maxmp,S.p.mp+24); }
+  if(id==='elixir'){ S.p.hp=st.maxhp; S.p.mp=st.maxmp; if(inBattle)floatHeal(st.maxhp); }
+  if(inBattle){ showBMenu(); syncBattleHero(); B.turn='anim'; log('You use a '+itemName(id)+'.'); setTimeout(endPlayerTurn,350); }
+  else { syncHud(); renderMenu(); }
+}
+function doFlee(){
+  if(B.boss){ toast('There is no fleeing this.'); return; }
+  if(Math.random()<0.7){ log('You slip away.'); B.over=true; setTimeout(()=>{ closeScreens(); },500); }
+  else { log('Couldn\'t escape!'); B.turn='anim'; setTimeout(enemyTurn,400); }
+}
+function endPlayerTurn(){
+  if(B.enemies.every(e=>!e.alive)){ winBattle(); return; }
+  B.turn='enemy'; setTimeout(enemyTurn,350);
+}
+function enemyTurn(){
+  const alive=B.enemies.filter(e=>e.alive);
+  let i=0;
+  const act=()=>{
+    if(i>=alive.length || B.over){ if(!B.over){ B.guard=false; B.turn='player'; syncBattleHero(); } return; }
+    const e=alive[i++];
+    const st=stats();
+    let dmg = e.atk*(0.9+Math.random()*0.3);
+    dmg -= st.def*0.6; dmg=Math.max(3,dmg);
+    if(B.guard) dmg*=0.5;
+    dmg=Math.round(dmg);
+    S.p.hp-=dmg;
+    log(e.name+' strikes for '+dmg+'.');
+    heroHurt();
+    syncBattleHero();
+    if(S.p.hp<=0){ S.p.hp=0; syncBattleHero(); B.over=true; setTimeout(gameOver,600); return; }
+    setTimeout(act,520);
+  };
+  act();
+}
+function checkPhase(){
+  const b=B.enemies[0];
+  if(B.boss && b.phase && !B.phased && b.hp<=b.maxhp*0.5){
+    B.phased=true; b.atk=Math.round(b.atk*1.35);
+    log('Malachar\'s form fractures — the very air screams. His fury doubles.');
+    barBreakText('THE KING UNRAVELS');
+  }
+}
+function winBattle(){
+  B.over=true;
+  let xp=0,gold=0; B.enemies.forEach(e=>{xp+=e.xp;gold+=e.gold;});
+  S.p.xp+=xp; S.p.gold+=gold;
+  let msg='Victory! +'+xp+' XP, +'+gold+' gold.';
+  const lvls=levelUps();
+  if(lvls) msg+='  '+lvls;
+  log(msg);
+  setTimeout(()=>{
+    const pend=S.flags.pendingLoot; S.flags.pendingLoot=null;
+    const boss=B.boss; const bid=B.enemies[0]?B.enemies[0].id:null;
+    closeScreens();
+    if(pend==='crypt') afterCrypt();
+    else if(pend==='wyvern') afterWyvern();
+    else if(bid==='guardian'){ S.flags.guardian=true; S.tools.grapple=true; gainRune('r_bolt');
+      loot('🌩️','Guardian Felled',"The Tempest Guardian falls. From its core you draw the <b>Skyhook ARM</b> — swing across any chasm now. The Aegis Vault lies just beyond, past the rift. A <b>Rune of Storm</b> glimmers in the wreckage.",()=>{}); }
+    else if(bid==='malachar'){ ending(); }
+  }, boss?900:1100);
+}
+function levelUps(){
+  let did=false, txt=[];
+  while(S.p.xp>=xpNext(S.p.lv)){
+    S.p.xp-=xpNext(S.p.lv); S.p.lv++; did=true;
+    const b=S.p.base;
+    b.maxhp+=Math.round(12+S.p.lv*3); b.maxmp+=Math.round(3+S.p.lv);
+    b.atk+=2; b.def+=1; b.mag+=2; b.res+=1; b.spd+=1;
+    S.p.sp+=2;
+    const st=stats(); S.p.hp=st.maxhp; S.p.mp=st.maxmp;
+    txt.push('LEVEL '+S.p.lv+'!');
+  }
+  if(did){ syncBattleHero(); }
+  return did? txt.join(' ') : '';
+}
+function gameOver(){
+  B.over=true;
+  loot('💀','You have fallen…',
+    "Darkness takes you — but the realm is not done with you yet. You wake in Emberhold, dazed, half your gold spent on the healers.",
+    ()=>{ S.px=8;S.py=18;S.mount='foot'; const st=stats(); S.p.hp=st.maxhp;S.p.mp=st.maxmp; S.p.gold=Math.floor(S.p.gold/2); closeScreens(); syncHud(); });
+}
+function ending(){
+  S.flags.won=true;
+  screen('intro');
+  $('introtext').innerHTML=
+    "Malachar breaks apart like the sky he broke — and where he falls, the seams of the world knit shut.<br><br>"+
+    "Light returns to the sundered seas. Islands lower gently home. In Emberhold, Elder Vael watches the horizon mend and whispers a name that will outlast the telling.<br><br>"+
+    "<b style='color:var(--brass);font-family:Cinzel'>The realm is whole. You made it so.</b><br><br>"+
+    "<span style='color:var(--aether)'>◆ Prototype complete. Roam freely, hunt the drakes, and perfect your build — or start a New Journey.</span>";
+  $('introGo').textContent='Continue Roaming ▶';
+  $('introGo').onclick=()=>{ closeScreens(); introGoDefault(); };
+}
+
+/* battle FX */
+function floatDmg(i, n, el, crit){
+  const zone=$('enemyzone'); const en=zone.querySelector('.enemy[data-i="'+i+'"]'); if(!en)return;
+  const r=en.getBoundingClientRect(), zr=zone.getBoundingClientRect();
+  const f=document.createElement('div'); f.className='float';
+  const col={fire:'#ff8a5a',ice:'#8fd6ff',bolt:'#ffe07a',void:'#c58aff',phys:'#ece4d1',none:'#ece4d1'}[el]||'#ece4d1';
+  f.style.color=col; f.textContent=(crit?'✦':'')+n; f.style.left=(r.left-zr.left+r.width/2-10)+'px'; f.style.top=(r.top-zr.top+10)+'px';
+  if(crit) f.style.fontSize='28px';
+  $('floaters').appendChild(f); setTimeout(()=>f.remove(),1000);
+}
+function floatHeal(n){
+  const f=document.createElement('div'); f.className='float'; f.style.color='var(--good)'; f.textContent='+'+n;
+  f.style.left='40%'; f.style.top='60%'; $('floaters').appendChild(f); setTimeout(()=>f.remove(),1000);
+}
+function hurt(i){ const en=document.querySelector('.enemy[data-i="'+i+'"]'); if(en){en.classList.add('hurt'); setTimeout(()=>en.classList.remove('hurt'),300);} }
+function killEnemy(i){ const en=document.querySelector('.enemy[data-i="'+i+'"]'); if(en) en.classList.add('dead'); markTarget(); }
+function heroHurt(){ const h=$('herospr'); h.style.transform='translateX(-6px)'; setTimeout(()=>h.style.transform='',150); }
+function barBreak(){ barBreakText('BAR BREAK!'); }
+function barBreakText(t){ const el=$('barbreak'); el.textContent=t; el.style.display='block'; el.style.animation='none'; void el.offsetWidth; el.style.animation='pop .7s ease-out'; setTimeout(()=>el.style.display='none',900); }
+
+/* ============================================================================
+   PAUSE MENU
+   ============================================================================ */
+let menuTab='status';
+function openMenu(){ menuTab='status'; setTab(); screen('menu'); }
+$('menuclose').onclick=()=>closeScreens();
+document.querySelectorAll('#menutabs .tab[data-t]').forEach(t=>t.onclick=()=>{ menuTab=t.dataset.t; setTab(); });
+function setTab(){ document.querySelectorAll('#menu .tab').forEach(t=>t.classList.toggle('on',t.dataset&&t.dataset.t===menuTab)); renderMenu(); }
+function renderMenu(){
+  const b=$('menubody'); const st=stats();
+  if(menuTab==='status'){
+    b.innerHTML=
+      `<div class="card"><h4>${S.p.name} <span>Lv ${S.p.lv}</span></h4>
+        <div class="kv"><span>HP</span><b>${S.p.hp} / ${st.maxhp}</b></div>
+        <div class="kv"><span>MP</span><b>${S.p.mp} / ${st.maxmp}</b></div>
+        <div class="kv"><span>Attack</span><b>${st.atk}</b></div>
+        <div class="kv"><span>Magic</span><b>${st.mag}</b></div>
+        <div class="kv"><span>Defense</span><b>${st.def}</b></div>
+        <div class="kv"><span>Resist</span><b>${st.res}</b></div>
+        <div class="kv"><span>Speed</span><b>${st.spd}</b></div>
+        <div class="kv"><span>Gold</span><b>◈ ${S.p.gold}</b></div>
+        <div class="kv"><span>Skill Points</span><b>${S.p.sp}</b></div>
+        <div class="kv"><span>XP to next</span><b>${Math.max(0,xpNext(S.p.lv)-S.p.xp)}</b></div>
+      </div>
+      <div class="card"><h4>ARMs & Mounts</h4>
+       <div class="d">Detonator: ${S.tools.bomb?'✅ blast sealed stone':'—'}<br>
+       Skyhook: ${S.tools.grapple?'✅ cross chasms':'—'}<br>
+       Vessel: ${S.flags.ship?'✅ sail the seas':'—'}<br>
+       Wyvern: ${S.flags.wyvern?'✅ fly anywhere (USE at roost)':'—'}</div></div>`;
+  }
+  else if(menuTab==='skills'){
+    let h=`<div class="hint">Equip up to 4 active skills. Socket runes to craft your own techniques — change element, add hits, drain life, shatter boss bars. Learned via level-ups & vaults.</div>`;
+    h+='<div class="card"><h4>Loadout</h4>';
+    S.loadout.forEach((id,slot)=>{
+      if(id){ const s=composed(id); const base=SKILLS[id];
+        h+=`<div class="kv"><span>${base.ic} ${base.name} <span class="tag ${s.el}">${s.el}</span> ${s.hits>1?('×'+s.hits):''} ${s.mp}MP</span>
+             <button class="btn" data-unequip="${slot}" style="padding:4px 8px;font-size:11px">✕</button></div>`;
+        // rune slots
+        const rr=S.runes[id]||[];
+        h+='<div class="slotrow">';
+        for(let k=0;k<2;k++){ const rid=rr[k];
+          h+=`<button class="btn" data-runeslot="${id}:${k}" style="padding:5px 8px;font-size:11px">${rid?(RUNES[rid].ic+' '+RUNES[rid].name):'+ rune'}</button>`; }
+        h+='</div>';
+      } else h+=`<div class="kv"><span style="color:var(--ink-dim)">— empty slot ${slot+1} —</span></div>`;
+    });
+    h+='</div>';
+    // learned skills to equip
+    h+='<div class="card"><h4>Known Techniques</h4>';
+    S.skills.forEach(id=>{ const s=SKILLS[id]; const eq=S.loadout.includes(id);
+      h+=`<div class="kv"><span>${s.ic} ${s.name} <span class="tag ${s.el}">${s.el}</span><br><span class="d">${s.d}</span></span>
+        <button class="btn ${eq?'on':'gold'}" data-equip="${id}" style="padding:5px 9px;font-size:11px" ${eq?'disabled':''}>${eq?'equipped':'equip'}</button></div>`;
+    });
+    h+='</div>';
+    // owned runes
+    h+='<div class="card"><h4>Runes Held</h4>';
+    if(!S.ownRunes.length) h+='<div class="d">None yet. Found in vaults & from bosses.</div>';
+    const counts={}; S.ownRunes.forEach(r=>counts[r]=(counts[r]||0)+1);
+    for(const rid in counts){ const r=RUNES[rid]; h+=`<div class="kv"><span>${r.ic} ${r.name} — <span class="d">${r.d}</span></span><b>×${counts[rid]}</b></div>`; }
+    h+='</div>';
+    b.innerHTML=h;
+    b.querySelectorAll('[data-equip]').forEach(x=>x.onclick=()=>equipSkill(x.dataset.equip));
+    b.querySelectorAll('[data-unequip]').forEach(x=>x.onclick=()=>{ S.loadout[+x.dataset.unequip]=null; renderMenu(); });
+    b.querySelectorAll('[data-runeslot]').forEach(x=>x.onclick=()=>pickRune(x.dataset.runeslot));
+  }
+  else if(menuTab==='gear'){
+    let h='<div class="hint">Legendary gear <b>multiplies</b> your stats — power spikes are meant to feel huge.</div>';
+    h+='<div class="card"><h4>Weapons</h4>';
+    S.ownWeapons.forEach(id=>{ const w=WEAPONS[id]; const eq=S.weapon===id;
+      h+=gearRow(id,w,eq,'weapon'); });
+    h+='</div><div class="card"><h4>Armor</h4>';
+    S.ownArmor.forEach(id=>{ const a=ARMORS[id]; const eq=S.armor===id; h+=gearRow(id,a,eq,'armor'); });
+    h+='</div>';
+    b.innerHTML=h;
+    b.querySelectorAll('[data-eqw]').forEach(x=>x.onclick=()=>{S.weapon=x.dataset.eqw;const st=stats();S.p.hp=Math.min(S.p.hp,st.maxhp);renderMenu();syncHud();});
+    b.querySelectorAll('[data-eqa]').forEach(x=>x.onclick=()=>{S.armor=x.dataset.eqa;const st=stats();S.p.hp=Math.min(S.p.hp,st.maxhp);renderMenu();syncHud();});
+  }
+  else if(menuTab==='items'){
+    let h='<div class="hint">Tap to use outside battle.</div>';
+    ['potion','hipotion','ether','elixir'].forEach(id=>{ const n=S.items[id]||0;
+      h+=`<div class="card"><div class="kv"><span>${itemName(id)} — <span class="d">${itemDesc(id)}</span></span>
+        <span><b>×${n}</b> <button class="btn gold" data-use="${id}" style="padding:5px 10px;font-size:11px" ${n?'':'disabled'}>use</button></span></div></div>`; });
+    b.innerHTML=h;
+    b.querySelectorAll('[data-use]').forEach(x=>x.onclick=()=>useItem(x.dataset.use,false));
+  }
+  else if(menuTab==='quest'){
+    b.innerHTML=`<div class="card"><h4>Current Objective</h4><div class="d">◆ ${QUESTS[S.quest]}</div></div>
+      <div class="card"><h4>The Tale So Far</h4><div class="d">The King Malachar sundered the world with the ancient ARMs. As the last Aetherborne, you gather those ARMs, cross the broken seas by ship and wyvern, plunder secret vaults for power, and rise to end him.</div></div>
+      <div class="hint">Tip: face a tile and press <b>USE</b> to talk, blast, open, or board. Green/forest tiles hold monsters — grind for XP and gold. Visit the ⚖️ merchant in Emberhold for supplies.</div>`;
+  }
+}
+function gearRow(id,g,eq,kind){
+  const mults=Object.entries(g.mult).map(([k,v])=>v!==1?(statLabel(k)+' ×'+v):null).filter(Boolean);
+  const flats=Object.entries(g.flat).map(([k,v])=>v?('+'+v+' '+statLabel(k)):null).filter(Boolean);
+  const bonus=[...mults,...flats].join(' · ')||'no bonus';
+  const el=kind==='weapon'?`<span class="tag ${g.el}">${g.el}</span>`:'';
+  return `<div class="kv"><span><span class="rar-${g.rar}">${g.ic} ${g.name}</span> ${el}<br>
+    <span class="d">${bonus}${g.barbreak?' · <b style="color:var(--brass)">shears boss bars</b>':''}<br>${g.d}</span></span>
+    <button class="btn ${eq?'on':'gold'}" data-eq${kind==='weapon'?'w':'a'}="${id}" style="padding:5px 9px;font-size:11px" ${eq?'disabled':''}>${eq?'worn':'equip'}</button></div>`;
+}
+function statLabel(k){return{maxhp:'HP',maxmp:'MP',atk:'ATK',def:'DEF',mag:'MAG',res:'RES',spd:'SPD'}[k]||k;}
+function equipSkill(id){
+  if(S.loadout.includes(id)) return;
+  const empty=S.loadout.indexOf(null);
+  if(empty<0){ toast('Loadout full — remove one first.'); return; }
+  S.loadout[empty]=id; renderMenu();
+}
+function pickRune(key){
+  const [id,k]=key.split(':'); const slot=+k;
+  const cur=S.runes[id]||[null,null];
+  // available = owned runes minus those equipped elsewhere (allow duplicates by count)
+  const counts={}; S.ownRunes.forEach(r=>counts[r]=(counts[r]||0)+1);
+  Object.values(S.runes).forEach(arr=>arr&&arr.forEach(r=>{if(r)counts[r]=(counts[r]||0)-1;}));
+  if(cur[slot]) counts[cur[slot]]=(counts[cur[slot]]||0)+1; // free the one in this slot
+  let h='<div class="card"><h4>Socket a Rune</h4>';
+  h+=`<button class="btn" data-setrune="${id}:${slot}:none">✕ Empty this slot</button>`;
+  let any=false;
+  for(const rid in counts){ if(counts[rid]>0){ any=true; const r=RUNES[rid];
+    h+=`<button class="btn gold" data-setrune="${id}:${slot}:${rid}" style="display:block;width:100%;margin-top:6px;text-align:left">${r.ic} ${r.name} — <span class="d">${r.d}</span></button>`; } }
+  if(!any) h+='<div class="d" style="margin-top:6px">No spare runes. Find more in vaults & from bosses.</div>';
+  h+='<button class="btn" data-runeback="1" style="margin-top:10px">◀ Back</button></div>';
+  $('menubody').innerHTML=h;
+  $('menubody').querySelectorAll('[data-setrune]').forEach(x=>x.onclick=()=>{
+    const [sid,sl,rid]=x.dataset.setrune.split(':');
+    if(!S.runes[sid]) S.runes[sid]=[null,null];
+    S.runes[sid][+sl]= rid==='none'?null:rid;
+    renderMenu();
+  });
+  $('menubody').querySelector('[data-runeback]').onclick=renderMenu;
+}
+
+/* ============================================================================
+   LOOT POPUP
+   ============================================================================ */
+let lootCb=null;
+function loot(ic,title,desc,cb){ $('lootIc').textContent=ic; $('lootTitle').textContent=title; $('lootDesc').innerHTML=desc; lootCb=cb||null; screen('loot'); }
+$('lootOk').onclick=()=>{ const c=lootCb; lootCb=null; closeScreens(); if(c)c(); syncHud(); };
+
+/* ============================================================================
+   QUEST / HUD / TOAST
+   ============================================================================ */
+function setQuest(n){ S.quest=Math.max(S.quest,n); syncHud(); }
+let toastT=null;
+function toast(t){ const el=$('toast'); el.innerHTML=t; el.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>el.style.display='none',2200); }
+function syncHud(){
+  const st=stats();
+  $('tLv').textContent=S.p.lv; $('tName').textContent=S.p.name;
+  $('tHp').style.width=Math.max(0,S.p.hp/st.maxhp*100)+'%';
+  $('tMp').style.width=Math.max(0,S.p.mp/st.maxmp*100)+'%';
+  $('tXp').style.width=Math.min(100,S.p.xp/xpNext(S.p.lv)*100)+'%';
+  $('tGold').textContent=S.p.gold;
+  $('objective').innerHTML='◆ '+QUESTS[S.quest];
+  updateActBtn();
+}
+
+/* ============================================================================
+   SCREEN MANAGEMENT
+   ============================================================================ */
+function screen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show')); $(id).classList.add('show'); }
+function closeScreens(){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show')); }
+function inOverworld(){ return !document.querySelector('.screen.show'); }
+
+/* ============================================================================
+   INPUT
+   ============================================================================ */
+const held={};
+function bindHold(id,dx,dy){
+  const el=$(id);
+  const on=e=>{e.preventDefault(); held.dx=dx; held.dy=dy;};
+  const off=e=>{e.preventDefault(); if(held.dx===dx&&held.dy===dy){held.dx=0;held.dy=0;}};
+  el.addEventListener('touchstart',on,{passive:false}); el.addEventListener('touchend',off,{passive:false});
+  el.addEventListener('touchcancel',off,{passive:false});
+  el.addEventListener('mousedown',on); el.addEventListener('mouseup',off); el.addEventListener('mouseleave',off);
+}
+bindHold('du',0,-1); bindHold('dd',0,1); bindHold('dl',-1,0); bindHold('dr',1,0);
+$('aAct').addEventListener('touchstart',e=>{e.preventDefault(); if(inOverworld())doAction();},{passive:false});
+$('aAct').addEventListener('click',()=>{ if(inOverworld())doAction(); });
+$('aMenu').addEventListener('touchstart',e=>{e.preventDefault(); if(inOverworld())openMenu();},{passive:false});
+$('aMenu').addEventListener('click',()=>{ if(inOverworld())openMenu(); });
+
+document.addEventListener('keydown',e=>{
+  if(!inOverworld()){
+    if(e.key==='Escape') closeScreens();
+    return;
+  }
+  const k=e.key.toLowerCase();
+  if(k==='arrowup'||k==='w'){held.dx=0;held.dy=-1;}
+  else if(k==='arrowdown'||k==='s'){held.dx=0;held.dy=1;}
+  else if(k==='arrowleft'||k==='a'){held.dx=-1;held.dy=0;}
+  else if(k==='arrowright'||k==='d'){held.dx=1;held.dy=0;}
+  else if(k===' '||k==='e'||k==='enter'){doAction();}
+  else if(k==='m'||k==='escape'){openMenu();}
+});
+document.addEventListener('keyup',e=>{
+  const k=e.key.toLowerCase();
+  if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){held.dx=0;held.dy=0;}
+});
+
+/* ============================================================================
+   SAVE / LOAD  (graceful fallback if storage unavailable)
+   ============================================================================ */
+function save(){ try{ localStorage.setItem('aetherborne_save', JSON.stringify(S)); toast('Journey saved.'); }catch(e){ toast('Progress saved (session).'); } }
+function loadSave(){ try{ const r=localStorage.getItem('aetherborne_save'); if(r) return JSON.parse(r); }catch(e){} return null; }
+function hasSave(){ return !!loadSave(); }
+let saveTick=0;
+
+/* ============================================================================
+   MAIN LOOP
+   ============================================================================ */
+let last=0;
+function loop(t){
+  const dt=t-last; last=t;
+  if(inOverworld()){
+    moveCd-=dt;
+    if((held.dx||held.dy) && moveCd<=0){ tryMove(held.dx,held.dy); moveCd=140; }
+    drawWorld();
+    saveTick+=dt; if(saveTick>8000){ saveTick=0; try{localStorage.setItem('aetherborne_save',JSON.stringify(S));}catch(e){} }
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ============================================================================
+   BOOT
+   ============================================================================ */
+function newGame(){
+  S=freshState(); buildWorld(); syncHud();
+  screen('intro');
+  $('introtext').innerHTML=
+    "The world was whole, once.<br><br>"+
+    "Then the King Malachar raised the ancient <b style='color:var(--brass)'>ARMs</b> and <i>sundered</i> it — seas torn into voids, mountains cast into the sky, a realm broken to be ruled in silence.<br><br>"+
+    "Generations passed. The seams widen. And in the village of Emberhold, an old man looks upon you — the last of the <b style='color:var(--aether)'>Aetherborne</b> — and knows the shattering can still be undone.<br><br>"+
+    "Take up the blade. Gather the ARMs. Cross the sundered seas.";
+  $('introGo').textContent='Begin ▶';
+  $('introGo').onclick=introGoDefault;
+}
+function introGoDefault(){ closeScreens(); syncHud(); }
+function continueGame(){
+  const s=loadSave(); if(!s){ toast('No saved journey found.'); return; }
+  S=s; buildWorld(); // rebuild map, then restore world flags that alter it
+  // reapply persistent map changes
+  if(S.tools.bomb && MAP[15] && MAP[15][24]===T.CRACK) MAP[15][24]=T.SAND;
+  syncHud(); closeScreens();
+}
+
+$('btnNew').onclick=()=>{ if(hasSave()){ if(!confirm('Start a new journey? This overwrites your saved game.')) return; } newGame(); };
+$('btnCont').onclick=continueGame;
+$('btnHelp').onclick=()=>{
+  dialogueSeq([
+    ['How to Play',"Move with the on-screen ✚ pad (or arrow keys / WASD). The gold <b>USE</b> button acts on whatever you\'re facing or standing on — talk, blast, open, board a ship, mount your wyvern."],
+    ['How to Play',"<b>MENU</b> opens Hero, Skills, Gear, Items and your Quest. Socket <b>runes</b> into skills to craft your own techniques. Legendary gear multiplies your stats."],
+    ['How to Play',"Bosses have <b>segmented life-bars</b> — hit hard enough and you shatter a whole bar at once. Follow the ◆ objective at the top of the screen. Your journey auto-saves."]
+  ]);
+  screen('title'); // keep title bg
+  // dialogue overlays over title; make sure dialogue visible
+  $('dialogue').style.display='block';
+};
+
+/* start */
+resize();
+S=freshState(); buildWorld(); // so the loop has something even before New Game
+requestAnimationFrame(loop);
+// draw title only; overworld hidden behind title screen until New/Continue
+if(hasSave()) $('btnCont').classList.add('gold');
+</script>
+</body>
+</html>

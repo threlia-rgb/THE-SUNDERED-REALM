@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Threlia — Gear Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{--gold:#e8c15a;--gold2:#b8862f;--goldl:#f7e6ad;--claret:#b21f3a;--ink:#f3ead4;--velvet:#2a1544;}
+  *{margin:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:none;}
+  html,body{height:100%;overflow:hidden;background:#0d0718;font-family:'Cormorant Garamond',Georgia,serif;color:var(--ink);}
+  #app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0d0718;}
+  #stage{position:relative;width:100%;height:100%;max-width:900px;max-height:900px;overflow:hidden;}
+  canvas{display:block;width:100%;height:100%;background:#1a0c2e;}
+
+  /* HUD */
+  #hud{position:absolute;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:16px;align-items:center;
+    pointer-events:none;font-family:'Cinzel';font-size:15px;color:var(--goldl);text-shadow:0 2px 4px #000;}
+  #hud .b{background:rgba(20,10,38,.55);border:1px solid var(--gold2);padding:3px 10px;border-radius:3px;}
+  #hud .sp{margin-left:auto;font-size:12px;color:#f0dca0;}
+
+  /* controls */
+  #ctrl{position:absolute;inset:0;pointer-events:none;}
+  .pad{position:absolute;bottom:24px;pointer-events:auto;}
+  #dl{left:16px;}#dr{left:104px;}
+  .db{width:78px;height:78px;border-radius:14px;background:rgba(30,20,54,.6);border:2px solid var(--gold2);
+    color:var(--goldl);font-size:30px;display:flex;align-items:center;justify-content:center;position:absolute;bottom:0;}
+  #dl .db{left:0;}#dr .db{left:0;}
+  #jump{right:20px;bottom:24px;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#7a4ac0,#3a1c6a 70%);
+    border:2px solid var(--goldl);color:var(--goldl);font-family:'Cinzel';font-size:18px;display:flex;align-items:center;justify-content:center;
+    pointer-events:auto;box-shadow:0 4px 14px rgba(0,0,0,.5);}
+  .db:active,#jump:active{filter:brightness(1.3);transform:translateY(2px);}
+
+  /* overlays */
+  .scr{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;background:rgba(10,6,22,.82);backdrop-filter:blur(3px);padding:26px;z-index:10;}
+  .scr.show{display:flex;}
+  .scr h1{font-family:'Cinzel';font-size:30px;color:var(--gold);letter-spacing:.06em;text-shadow:0 0 24px rgba(201,162,75,.4);}
+  .scr h2{font-family:'Cinzel';font-size:26px;color:var(--gold);margin-bottom:8px;}
+  .scr .s{color:#8fe0d4;font-style:italic;letter-spacing:.14em;font-size:13px;margin:6px 0 22px;}
+  .scr p{color:#d9cba8;font-size:14px;line-height:1.7;max-width:340px;margin-bottom:22px;}
+  .scr p b{color:var(--goldl);}
+  .pbtn{font-family:'Cinzel';letter-spacing:.05em;font-size:16px;color:#160a26;background:linear-gradient(180deg,#f6e2a0,#d8a93f);
+    border:none;padding:13px 40px;cursor:pointer;box-shadow:0 6px 20px rgba(232,193,90,.3);}
+  .pbtn:active{transform:translateY(2px);}
+  @media(max-height:520px){.db{width:64px;height:64px}#jump{width:80px;height:80px}#dr{left:90px}}
+</style>
+</head>
+<body>
+<div id="app"><div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="hud">
+    <span class="b">🪙 <b id="coins">0</b></span>
+    <span class="b">❤ <b id="lives">3</b></span>
+    <span class="sp" id="sub">Reach the castle!</span>
+  </div>
+
+  <div id="ctrl">
+    <div class="pad" id="dl"><div class="db">◀</div></div>
+    <div class="pad" id="dr"><div class="db">▶</div></div>
+    <div id="jump">JUMP</div>
+  </div>
+
+  <div class="scr show" id="title">
+    <h1>THRELIA</h1><div class="s">GEAR&nbsp;RUN</div>
+    <p>The champion storms the floating <b>Gear Fortress</b>. Run and jump across the isles, <b>stomp</b> the mechanical foes, collect <b>gears</b>, and reach the castle at the end.</p>
+    <p style="font-size:12.5px;color:#a89f8e">Move: on-screen ◀ ▶ &nbsp;·&nbsp; Jump: JUMP button (hold for higher).<br>Desktop: Arrows / A·D + Space.</p>
+    <button class="pbtn" id="startBtn">Begin the Run</button>
+  </div>
+
+  <div class="scr" id="over">
+    <h2 id="overT">Game Over</h2>
+    <p id="overP"></p>
+    <button class="pbtn" id="againBtn">Try Again</button>
+  </div>
+</div></div>
+
+<script>
+"use strict";
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d'), $=id=>document.getElementById(id);
+let CW=0,CH=0,DPR=1,T=40;
+function resize(){ const st=document.getElementById('stage'); DPR=Math.min(devicePixelRatio||1,2);
+  CW=st.clientWidth; CH=st.clientHeight; cv.width=CW*DPR; cv.height=CH*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+  T=Math.max(30,Math.floor(CW/12)); }
+addEventListener('resize',resize); resize();
+
+/* ---------------- LEVEL (stamped for guaranteed validity) ---------------- */
+const W=152, H=15;
+let grid=[];              // tile chars
+let enemies=[], coins=[], fx=[];
+const SOLID='#B?UsXP-';   // solid tile chars
+const GROUND_Y=13;        // rows 13,14 are ground
+let checkpointX=0, flagX=0, castleX=0, startX=0;
+
+function blank(){ grid=[]; for(let y=0;y<H;y++) grid.push(new Array(W).fill(' ')); }
+function set(x,y,c){ if(y>=0&&y<H&&x>=0&&x<W) grid[y][x]=c; }
+function rect(x0,y0,x1,y1,c){ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++) set(x,y,c); }
+function isPit(x,pits){ return pits.some(([a,b])=>x>=a&&x<=b); }
+
+function buildLevel(){
+  blank();
+  const pits=[[25,27],[52,55],[86,88],[118,121]];
+  // ground
+  for(let x=0;x<W;x++){ if(!isPit(x,pits)){ set(x,GROUND_Y,'#'); set(x,GROUND_Y+1,'#'); } }
+  startX=3;
+  // early ? and bricks
+  set(10,9,'?');
+  rect(16,9,20,9,'B'); set(17,9,'?'); set(19,9,'?');
+  // pipe 1
+  rect(36,11,36,12,'P'); rect(37,11,37,12,'P');
+  // floating ? over gap 2 area
+  set(46,8,'?'); set(47,8,'B'); set(48,8,'?');
+  // pipe 2 (taller)
+  rect(70,10,71,12,'P');
+  // brick cluster B
+  rect(96,9,100,9,'B'); set(97,9,'?'); set(99,9,'?');
+  // staircase up then down (classic)
+  for(let i=0;i<4;i++){ rect(74+i,GROUND_Y-1-i,74+i,GROUND_Y-1,'s'); }
+  for(let i=0;i<4;i++){ rect(82+i,GROUND_Y-1-(3-i),82+i,GROUND_Y-1,'s'); }
+  // helper platform for last big gap
+  rect(119,10,121,10,'-');
+  // final staircase to castle
+  for(let i=0;i<5;i++){ rect(134+i,GROUND_Y-1-i,134+i,GROUND_Y-1,'s'); }
+  // checkpoint + flag + castle
+  checkpointX=64; flagX=144; castleX=147;
+  // coins
+  const cs=[[10,7],[17,7],[19,7],[24,9],[26,7],[28,9],[46,6],[48,6],[53,8],[54,7],[55,8],
+    [63,9],[70,8],[71,8],[87,7],[97,7],[99,7],[104,9],[110,9],[119,8],[120,7],[121,8],[130,9],[137,7]];
+  cs.forEach(([x,y])=>{ if(grid[y]&&grid[y][x]===' ') coins.push({x:x*T+T*0.28,y:y*T+T*0.25,w:T*0.44,h:T*0.5,got:false}); });
+  // enemies:  g = gearling(stompable),  s = sawblade(spiky, not stompable)
+  [[13,'g'],[42,'g'],[58,'g'],[78,'g'],[104,'g'],[112,'s'],[128,'g']].forEach(([x,ty])=>{
+    enemies.push({x:x*T,y:(GROUND_Y-1)*T,w:T*0.8,h:T*0.8,vx:(ty==='s'?-1.7:-1.05),vy:0,dead:0,spiky:ty==='s',t:0});
+  });
+}
+
+/* ---------------- PLAYER ---------------- */
+let P, cam={x:0,y:0}, game={state:'title',coins:0,lives:3};
+function resetPlayer(atX){ P={ x:atX*T, y:(GROUND_Y-2)*T, w:T*0.66, h:T*0.9, vx:0, vy:0, onGround:false, face:1, coyote:0, buffer:0, invuln:0, anim:0 }; }
+function startGame(){ enemies=[];coins=[];fx=[]; buildLevel(); game.state='play'; game.coins=0; game.lives=3;
+  resetPlayer(startX); cam.x=0; syncHud(); hide('title'); hide('over'); }
+function respawn(){ resetPlayer(Math.floor((checkpointReached?checkpointX:startX))); P.invuln=90; }
+let checkpointReached=false;
+
+/* ---------------- INPUT ---------------- */
+const K={left:false,right:false,jump:false,jumpEdge:false};
+function bindBtn(el,on,off){ el.addEventListener('touchstart',e=>{e.preventDefault();on();},{passive:false});
+  ['touchend','touchcancel'].forEach(ev=>el.addEventListener(ev,e=>{e.preventDefault();off();},{passive:false}));
+  el.addEventListener('mousedown',on); addEventListener('mouseup',off); }
+bindBtn($('dl'),()=>K.left=true,()=>K.left=false);
+bindBtn($('dr'),()=>K.right=true,()=>K.right=false);
+bindBtn($('jump'),()=>{if(!K.jump)K.jumpEdge=true;K.jump=true;},()=>K.jump=false);
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+  if(k==='arrowleft'||k==='a')K.left=true; else if(k==='arrowright'||k==='d')K.right=true;
+  else if(k===' '||k==='arrowup'||k==='w'){ if(!K.jump)K.jumpEdge=true; K.jump=true; } });
+addEventListener('keyup',e=>{const k=e.key.toLowerCase();
+  if(k==='arrowleft'||k==='a')K.left=false; else if(k==='arrowright'||k==='d')K.right=false;
+  else if(k===' '||k==='arrowup'||k==='w')K.jump=false; });
+
+/* ---------------- PHYSICS ---------------- */
+const GRAV=0.62, ACC=0.6, MAXRUN=4.7, FRIC=0.78, JUMP=-11.4, STOMP=-8.5;
+function solid(tx,ty){ if(tx<0||tx>=W||ty<0||ty>=H) return false; return SOLID.includes(grid[ty][tx]); }
+function stepPhysics(){
+  // horizontal
+  if(K.left){ P.vx-=ACC; P.face=-1; } else if(K.right){ P.vx+=ACC; P.face=1; }
+  else { P.vx*=FRIC; if(Math.abs(P.vx)<0.1)P.vx=0; }
+  P.vx=Math.max(-MAXRUN,Math.min(MAXRUN,P.vx));
+  // jump (coyote + buffer)
+  if(P.onGround)P.coyote=7; else if(P.coyote>0)P.coyote--;
+  if(K.jumpEdge){P.buffer=7;K.jumpEdge=false;} else if(P.buffer>0)P.buffer--;
+  if(P.buffer>0 && P.coyote>0){ P.vy=JUMP; P.onGround=false; P.coyote=0; P.buffer=0; }
+  if(!K.jump && P.vy<-4) P.vy*=0.5; // variable jump height
+  // gravity
+  P.vy+=GRAV; if(P.vy>16)P.vy=16;
+  // move X
+  P.x+=P.vx; collideX(P);
+  // move Y
+  P.y+=P.vy; collideY(P);
+  P.anim+=Math.abs(P.vx)*0.06;
+  if(P.invuln>0)P.invuln--;
+  // fell in pit
+  if(P.y>H*T+40){ hurt(true); }
+}
+function collideX(o){ const top=Math.floor(o.y/T), bot=Math.floor((o.y+o.h-1)/T);
+  if(o.vx>0){ const c=Math.floor((o.x+o.w)/T); for(let ty=top;ty<=bot;ty++) if(solid(c,ty)){ o.x=c*T-o.w-0.01; o.vx=0; o._wall=1; return; } }
+  else if(o.vx<0){ const c=Math.floor(o.x/T); for(let ty=top;ty<=bot;ty++) if(solid(c,ty)){ o.x=(c+1)*T+0.01; o.vx=0; o._wall=-1; return; } }
+  o._wall=0;
+}
+function collideY(o,isEnemy){ const lft=Math.floor(o.x/T), rgt=Math.floor((o.x+o.w-1)/T); o.onGround=false;
+  if(o.vy>0){ const r=Math.floor((o.y+o.h)/T); for(let tx=lft;tx<=rgt;tx++) if(solid(tx,r)){ o.y=r*T-o.h-0.01; o.vy=0; o.onGround=true; return; } }
+  else if(o.vy<0){ const r=Math.floor(o.y/T); for(let tx=lft;tx<=rgt;tx++) if(solid(tx,r)){
+        if(!isEnemy) headBump(tx,r); o.y=(r+1)*T+0.01; o.vy=0; return; } }
+}
+function headBump(tx,ty){ const c=grid[ty][tx];
+  if(c==='?'){ grid[ty][tx]='U'; game.coins++; syncHud(); fx.push({type:'coin',x:tx*T+T/2,y:ty*T,vy:-4,life:1}); }
+  else if(c==='B'){ fx.push({type:'bump',x:tx*T+T/2,y:ty*T,life:0.2}); }
+}
+
+/* ---------------- ENEMIES ---------------- */
+function stepEnemies(){
+  enemies.forEach(e=>{ if(e.dead){ e.dead--; return; } e.t++;
+    e.vy+=GRAV; if(e.vy>14)e.vy=14;
+    e.x+=e.vx; collideX(e); if(e._wall) e.vx=-e.vx;
+    e.y+=e.vy; collideY(e,true);
+    // ledge reverse
+    if(e.onGround){ const ahead=Math.floor((e.x+(e.vx>0?e.w+2:-2))/T), below=Math.floor((e.y+e.h+2)/T);
+      if(!solid(ahead,below)) e.vx=-e.vx; }
+    // vs player
+    if(P.invuln<=0 && aabb(P,e)){
+      const pb=P.y+P.h, stomp=(P.vy>0 && (pb - e.y) < e.h*0.6);
+      if(stomp && !e.spiky){ e.dead=18; P.vy=STOMP; game.coins++; syncHud(); fx.push({type:'pop',x:e.x+e.w/2,y:e.y,life:0.5}); }
+      else hurt(false);
+    }
+  });
+  enemies=enemies.filter(e=>!(e.dead!==0&&e.dead<=1));
+}
+function aabb(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+function hurt(pit){ if(game.state!=='play')return; game.lives--; syncHud();
+  fx.push({type:'hurt',x:P.x,y:P.y,life:0.4});
+  if(game.lives<=0){ gameOver(false); return; }
+  respawn();
+}
+
+/* ---------------- FX / COINS / GOAL ---------------- */
+function stepWorld(){
+  coins.forEach(c=>{ if(!c.got && aabb(P,c)){ c.got=true; game.coins++; syncHud(); fx.push({type:'coin',x:c.x+c.w/2,y:c.y,vy:-3,life:0.7}); } });
+  fx.forEach(f=>{ if(f.vy!==undefined){f.y+=f.vy; f.vy+=0.25;} f.life-=0.03; });
+  fx=fx.filter(f=>f.life>0);
+  if(!checkpointReached && P.x> checkpointX*T){ checkpointReached=true; $('sub').textContent='Checkpoint! Onward.'; fx.push({type:'flagc',x:checkpointX*T,y:(GROUND_Y-3)*T,life:1.2}); }
+  if(P.x > flagX*T){ gameOver(true); }
+}
+function syncHud(){ $('coins').textContent=game.coins; $('lives').textContent=Math.max(0,game.lives); }
+
+/* ---------------- RENDER ---------------- */
+function draw(){
+  const worldW=W*T, worldH=H*T;
+  cam.x=Math.max(0,Math.min(P.x+P.w/2-CW/2, worldW-CW)); if(worldW<CW)cam.x=0;
+  let offY, camY;
+  if(worldH<=CH){ camY=0; offY=CH-worldH; } else { camY=Math.max(0,Math.min(P.y+P.h/2-CH*0.62, worldH-CH)); offY=0; }
+  const sx=v=>v-cam.x, sy=v=>v-camY+offY;
+  // sky
+  const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,'#341a58'); g.addColorStop(.55,'#6a3f8c'); g.addColorStop(1,'#e0a85a');
+  ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+  // parallax floating isles
+  for(let i=0;i<6;i++){ const px=((i*260 - cam.x*0.35)%(worldW+300)); const py=offY+ (i%2?70:130) + Math.sin((Date.now()/1400)+i)*6;
+    ctx.fillStyle='rgba(70,40,110,.5)'; roundIsle(px,py,120,26); ctx.fillStyle='rgba(90,60,140,.5)'; roundIsle(px+30,py-30,80,18); }
+  // hills
+  ctx.fillStyle='rgba(40,22,70,.6)';
+  for(let i=0;i<8;i++){ const hx=(i*220 - cam.x*0.6)%(worldW+240); ctx.beginPath(); ctx.arc(hx,sy(GROUND_Y*T)+10,150,Math.PI,0); ctx.fill(); }
+
+  // tiles
+  const x0=Math.max(0,Math.floor(cam.x/T)-1), x1=Math.min(W-1,Math.floor((cam.x+CW)/T)+1);
+  for(let ty=0;ty<H;ty++) for(let tx=x0;tx<=x1;tx++){ const c=grid[ty][tx]; if(c===' ')continue;
+    drawTile(c,sx(tx*T),sy(ty*T)); }
+
+  // checkpoint + flag + castle
+  drawFlag(sx(checkpointX*T+T/2), sy(GROUND_Y*T), checkpointReached, '#57e0c8');
+  drawFlag(sx(flagX*T+T/2), sy(GROUND_Y*T), true, '#e8c15a');
+  ctx.font=`${T*1.8}px serif`; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.fillText('🏰', sx(castleX*T+T), sy((GROUND_Y)*T)+2);
+
+  // coins
+  coins.forEach(c=>{ if(c.got)return; ctx.font=`${T*0.7}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    const bob=Math.sin(Date.now()/240 + c.x)*3; ctx.fillText('🪙', sx(c.x+c.w/2), sy(c.y+c.h/2)+bob); });
+
+  // enemies
+  enemies.forEach(e=>{ ctx.save(); ctx.font=`${T*0.8}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(e.dead){ ctx.translate(sx(e.x+e.w/2),sy(e.y+e.h*0.8)); ctx.scale(1,0.4); ctx.globalAlpha=Math.max(0,e.dead/18);
+      ctx.fillText(e.spiky?'🛞':'⚙️',0,0); }
+    else { const spin=e.spiky?(Date.now()/120):0; ctx.translate(sx(e.x+e.w/2),sy(e.y+e.h/2)); ctx.rotate(spin);
+      ctx.fillText(e.spiky?'🛞':'⚙️',0,0); }
+    ctx.restore(); });
+
+  // player
+  ctx.save(); const blink=P.invuln>0 && Math.floor(P.invuln/4)%2===0; if(blink)ctx.globalAlpha=0.4;
+  const squash = P.onGround? (1+Math.sin(P.anim)*0.04) : 1; const stretch = P.onGround?1:(P.vy<0?1.1:0.95);
+  ctx.translate(sx(P.x+P.w/2), sy(P.y+P.h/2)); ctx.scale(P.face*squash, stretch);
+  ctx.font=`${T*0.95}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🧝',0,0);
+  ctx.restore();
+
+  // fx
+  fx.forEach(f=>{ ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(f.type==='coin'){ ctx.globalAlpha=Math.max(0,f.life); ctx.font=`${T*0.6}px serif`; ctx.fillText('🪙',sx(f.x),sy(f.y)); ctx.globalAlpha=1; }
+    else if(f.type==='pop'){ ctx.globalAlpha=Math.max(0,f.life*2); ctx.fillStyle='#fff'; ctx.font=`bold ${T*0.5}px Cinzel`; ctx.fillText('✦',sx(f.x),sy(f.y)); ctx.globalAlpha=1; }
+    else if(f.type==='hurt'){ ctx.globalAlpha=Math.max(0,f.life*2); ctx.fillStyle='#ff7a7a'; ctx.font=`bold ${T*0.5}px Cinzel`; ctx.fillText('!',sx(f.x),sy(f.y)); ctx.globalAlpha=1; } });
+}
+function roundIsle(x,y,w,h){ ctx.beginPath(); ctx.ellipse(x,y,w/2,h,0,0,Math.PI*2); ctx.fill(); }
+function drawTile(c,x,y){
+  if(c==='#'){ ctx.fillStyle='#6a4a30'; ctx.fillRect(x,y,T+1,T+1); ctx.fillStyle='#caa24b'; ctx.fillRect(x,y,T+1,5);
+    ctx.fillStyle='rgba(0,0,0,.18)'; ctx.fillRect(x,y+T-6,T+1,6); }
+  else if(c==='B'){ ctx.fillStyle='#5a3a7a'; ctx.fillRect(x,y,T+1,T+1); ctx.strokeStyle='#3a2358'; ctx.lineWidth=2;
+    ctx.strokeRect(x+2,y+2,T-4,T/2-3); ctx.strokeRect(x+2,y+T/2+1,T-4,T/2-3); }
+  else if(c==='?'){ const bob=Math.sin(Date.now()/300+x)*2; ctx.fillStyle='#e8c15a'; ctx.fillRect(x+1,y+1+bob,T-1,T-1);
+    ctx.strokeStyle='#8a6320'; ctx.lineWidth=2; ctx.strokeRect(x+3,y+3+bob,T-6,T-6);
+    ctx.fillStyle='#7a5210'; ctx.font=`bold ${T*0.6}px Cinzel`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('?',x+T/2,y+T/2+bob); }
+  else if(c==='U'){ ctx.fillStyle='#3a2f4e'; ctx.fillRect(x,y,T+1,T+1); ctx.strokeStyle='#241a38'; ctx.lineWidth=2; ctx.strokeRect(x+3,y+3,T-6,T-6); }
+  else if(c==='P'){ ctx.fillStyle='#b8862f'; ctx.fillRect(x,y,T+1,T+1); ctx.fillStyle='#d8a94b'; ctx.fillRect(x+2,y,4,T); ctx.fillStyle='rgba(0,0,0,.2)'; ctx.fillRect(x+T-6,y,6,T); }
+  else if(c==='s'||c==='X'){ ctx.fillStyle='#8a8494'; ctx.fillRect(x,y,T+1,T+1); ctx.fillStyle='#a9a4b6'; ctx.fillRect(x,y,T+1,4); ctx.fillStyle='rgba(0,0,0,.2)'; ctx.fillRect(x,y+T-5,T+1,5); }
+  else if(c==='-'){ ctx.fillStyle='#8a6a3a'; ctx.fillRect(x,y,T+1,T*0.5); ctx.fillStyle='#b58a4a'; ctx.fillRect(x,y,T+1,4); }
+}
+function drawFlag(x,groundY,raised,color){
+  ctx.fillStyle='#cfc7d8'; ctx.fillRect(x-2,groundY-T*3.2,4,T*3.2);
+  ctx.fillStyle=color; ctx.beginPath(); const fy=groundY-T*3.0; ctx.moveTo(x+2,fy); ctx.lineTo(x+T*0.9,fy+T*0.4); ctx.lineTo(x+2,fy+T*0.8); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#e8c15a'; ctx.beginPath(); ctx.arc(x,groundY-T*3.2,4,0,7); ctx.fill();
+}
+
+/* ---------------- LOOP (fixed timestep) ---------------- */
+let acc=0, last=performance.now();
+function frame(now){ let dt=(now-last)/1000; last=now; if(dt>0.1)dt=0.1; acc+=dt;
+  const STEP=1/60;
+  while(acc>=STEP){ if(game.state==='play'){ stepPhysics(); stepEnemies(); stepWorld(); } acc-=STEP; }
+  if(game.state!=='title') draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------------- STATE ---------------- */
+function show(id){ $(id).classList.add('show'); } function hide(id){ $(id).classList.remove('show'); }
+function gameOver(win){ game.state='done';
+  $('overT').textContent = win?'The Castle is Won! 🏰':'Game Over';
+  $('overP').innerHTML = win
+    ? `You stormed the Gear Fortress and gathered <b>${game.coins}</b> gears. Threlia\'s champion stands triumphant.`
+    : `The fortress holds — for now. You gathered <b>${game.coins}</b> gears. Rally and try again.`;
+  $('againBtn').textContent = win?'Run Again':'Try Again';
+  show('over');
+}
+$('startBtn').onclick=startGame;
+$('againBtn').onclick=()=>{ checkpointReached=false; startGame(); };
+</script>
+</body>
+</html>
